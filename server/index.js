@@ -5,29 +5,45 @@ import session from 'express-session';
 import bodyParser from 'body-parser';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import helmet from 'helmet';
+import compression from 'compression';
+import bcrypt from 'bcryptjs';
 
 dotenv.config();
 const app = express();
 
+// Middleware: Security and Performance
+app.use(helmet()); // Secure HTTP headers
+app.use(compression()); // Compress responses
+
+// Session Middleware
 app.use(session({
   secret: process.env.SESSION_SECRET,
   resave: false,
   saveUninitialized: false,
   cookie: { 
     sameSite: 'lax',
-    secure: false // set to true only if using HTTPS
+    secure: false,
+    //secure: process.env.NODE_ENV === 'production' // Secure cookies in production (HTTPS)
   }
 }));
 
+// CORS Middleware
 app.use(cors({
   origin: process.env.CLIENT_URL,
   credentials: true
 }));
 
+// Body Parsing Middleware
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.json());
 
-// PostgreSQL connection pool
+// PostgreSQL Connection Pool (using DATABASE_URL)
+/* const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : false
+}); */
+
 const pool = new Pool({
   user: process.env.DB_USER,
   host: process.env.DB_HOST,
@@ -37,17 +53,17 @@ const pool = new Pool({
   ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : false
 });
 
-// Test database connection
+// Test Database Connection
 pool.connect()
   .then(client => {
     console.log('Connected to the database!');
     client.release();
   })
   .catch(err => {
-    console.error('Database connection failed:', err);
+    console.error('Database connection failed:', err.stack);
   });
 
-// Middleware to check if user is an admin
+// Middleware to Check if User is an Admin
 function isAdmin(req, res, next) {
   console.log('Session data:', req.session);
   console.log('Session user:', req.session.user);
@@ -59,7 +75,7 @@ function isAdmin(req, res, next) {
   next();
 }
 
-// User registration
+// User Registration (with bcrypt)
 app.post('/register', async (req, res) => {
   const { username, email, password, role = 'user' } = req.body;
 
@@ -68,18 +84,22 @@ app.post('/register', async (req, res) => {
   }
 
   try {
+    // Hash the password
+    const saltRounds = 10;
+    const hashedPassword = await bcrypt.hash(password, saltRounds);
+
     const query = 'INSERT INTO users (username, email, password, role) VALUES ($1, $2, $3, $4) RETURNING id';
-    const result = await pool.query(query, [username, email, password, role]);
+    const result = await pool.query(query, [username, email, hashedPassword, role]);
     
     req.session.user = { user_id: result.rows[0].id, username, email, role };
     res.json({ message: 'Registration successful', user: req.session.user });
   } catch (err) {
-    console.error('Error inserting user:', err);
+    console.error('Error inserting user:', err.stack);
     return res.status(500).json({ error: 'Registration failed' });
   }
 });
 
-// Login
+// Login (with bcrypt)
 app.post('/login', async (req, res) => {
   const { email, password } = req.body;
 
@@ -92,33 +112,38 @@ app.post('/login', async (req, res) => {
     }
 
     const user = result.rows[0];
-    if (user.password === password) {
+    // Compare hashed password
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (isMatch) {
       req.session.user = { 
         user_id: user.id, 
         username: user.username, 
         email: user.email, 
         role: user.role 
       };
-      console.log('Session set after login:', req.session.user); // Added logging
       res.json({ message: 'Login successful', user: req.session.user });
     } else {
       res.status(401).json({ error: 'Invalid password' });
     }
   } catch (err) {
-    console.error('Login error:', err);
+    console.error('Login error:', err.stack);
     return res.status(500).json({ error: 'Login failed' });
   }
 });
 
+// Logout
 app.post('/logout', (req, res) => {
   req.session.destroy(err => {
-    if (err) return res.status(500).json({ error: "Logout failed" });
+    if (err) {
+      console.error('Logout error:', err.stack);
+      return res.status(500).json({ error: "Logout failed" });
+    }
     res.clearCookie('connect.sid');
     res.json({ message: "Logged out successfully" });
   });
 });
 
-// Edit profile
+// Edit Profile (with bcrypt for password updates)
 app.put('/api/update-profile', async (req, res) => {
   if (!req.session.user) {
     return res.status(401).json({ error: "Not logged in" });
@@ -143,8 +168,11 @@ app.put('/api/update-profile', async (req, res) => {
     paramCounter++;
   }
   if (password) {
+    // Hash the new password
+    const saltRounds = 10;
+    const hashedPassword = await bcrypt.hash(password, saltRounds);
     fields.push(`password = $${paramCounter}`);
-    values.push(password);
+    values.push(hashedPassword);
     paramCounter++;
   }
 
@@ -166,12 +194,12 @@ app.put('/api/update-profile', async (req, res) => {
       email: req.session.user.email
     });
   } catch (err) {
-    console.error('Error updating profile:', err);
+    console.error('Error updating profile:', err.stack);
     return res.status(500).json({ error: "Failed to update profile" });
   }
 });
 
-// Admin: Get questions by category
+// Admin: Get Questions by Category
 app.get('/admin/questions', isAdmin, async (req, res) => {
   const { category } = req.query;
 
@@ -184,12 +212,12 @@ app.get('/admin/questions', isAdmin, async (req, res) => {
     const result = await pool.query('SELECT * FROM questions WHERE category = $1', [normalizedCategory]);
     res.json(result.rows);
   } catch (err) {
-    console.error('Database error:', err);
+    console.error('Database error:', err.stack);
     return res.status(500).json({ error: 'Database error' });
   }
 });
 
-// Admin: Add a question
+// Admin: Add a Question
 app.post('/admin/add-question', isAdmin, async (req, res) => {
   const { question_text, option_a, option_b, option_c, option_d, correct_option, category } = req.body;
   
@@ -209,12 +237,12 @@ app.post('/admin/add-question', isAdmin, async (req, res) => {
     
     res.json({ message: "Question added successfully!", question_id: result.rows[0].id });
   } catch (err) {
-    console.error("Database error:", err);
-    return res.status(500).json({ error: "Database error", details: err });
+    console.error("Database error:", err.stack);
+    return res.status(500).json({ error: "Database error", details: err.message });
   }
 });
 
-// Admin: View questions by category
+// Admin: View Questions by Category
 app.get('/admin/view-questions', isAdmin, async (req, res) => {
   const { category } = req.query;
 
@@ -233,12 +261,12 @@ app.get('/admin/view-questions', isAdmin, async (req, res) => {
     const result = await pool.query(query, params);
     res.json(result.rows);
   } catch (err) {
-    console.error('Database error:', err);
+    console.error('Database error:', err.stack);
     return res.status(500).json({ error: 'Database error' });
   }
 });
 
-// Admin: Delete a question
+// Admin: Delete a Question
 app.delete('/admin/delete-question/:id', isAdmin, async (req, res) => {
   const questionId = req.params.id;
 
@@ -251,12 +279,12 @@ app.delete('/admin/delete-question/:id', isAdmin, async (req, res) => {
 
     res.json({ message: 'Question deleted successfully' });
   } catch (err) {
-    console.error('Database error:', err);
+    console.error('Database error:', err.stack);
     return res.status(500).json({ error: 'Database error' });
   }
 });
 
-// Check user role
+// Check User Role
 app.get('/api/user', (req, res) => {
   if (!req.session.user) {
     return res.status(401).json({ error: "Not logged in" });
@@ -266,7 +294,7 @@ app.get('/api/user', (req, res) => {
   res.json({ user_id, username, email, role });
 });
 
-// Load quiz
+// Load Quiz
 app.get('/questions', async (req, res) => {
   if (!req.session.user) {
     return res.status(401).json({ error: "User not logged in" });
@@ -279,18 +307,15 @@ app.get('/questions', async (req, res) => {
 
   try {
     const normalizedCategory = category === 'General Knowledge' ? 'GK' : category;
-    console.log('Fetching questions for category:', normalizedCategory);
-    
     const result = await pool.query('SELECT * FROM questions WHERE category = $1', [normalizedCategory]);
-    console.log('Questions found:', result.rows.length);
     res.json(result.rows);
   } catch (err) {
-    console.error('Error fetching questions:', err);
+    console.error('Error fetching questions:', err.stack);
     return res.status(500).json({ error: 'Database error' });
   }
 });
 
-// Submit quiz
+// Submit Quiz
 app.post('/submit-quiz', async (req, res) => {
   if (!req.session.user) {
     return res.status(401).json({ error: "User not logged in" });
@@ -356,12 +381,12 @@ app.post('/submit-quiz', async (req, res) => {
       client.release();
     }
   } catch (err) {
-    console.error("Quiz submission error:", err);
+    console.error("Quiz submission error:", err.stack);
     res.status(500).json({ error: "Database error", details: err.message });
   }
 });
 
-// Fetch quiz results
+// Fetch Quiz Results
 app.get('/quiz-results/:quiz_id', async (req, res) => {
   if (!req.session.user) {
     return res.status(401).json({ error: "User not logged in" });
@@ -380,12 +405,12 @@ app.get('/quiz-results/:quiz_id', async (req, res) => {
     
     res.json(result.rows);
   } catch (err) {
-    console.error("Database error:", err);
+    console.error("Database error:", err.stack);
     return res.status(500).json({ error: "Database error" });
   }
 });
 
-// Get user quiz statistics
+// Get User Quiz Statistics
 app.get('/quiz-stats', async (req, res) => {
   if (!req.session.user) {
     return res.status(401).json({ error: "Not logged in" });
@@ -418,9 +443,16 @@ app.get('/quiz-stats', async (req, res) => {
     
     res.json(mappedResults);
   } catch (err) {
-    console.error('Database error:', err);
+    console.error('Database error:', err.stack);
     return res.status(500).json({ error: "Failed to fetch quiz statistics" });
   }
+});
+
+// Error Handling Middleware
+app.use((err, req, res, next) => {
+  console.error('Unexpected error:', err.stack);
+  res.status(500).json({ error: 'Something went wrong!' });
+  next();
 });
 
 const PORT = process.env.PORT || 3001;
