@@ -39,19 +39,19 @@ app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.json());
 
 // PostgreSQL Connection Pool (using DATABASE_URL)
-/* const pool = new Pool({
+const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : false
-}); */
+});
 
-const pool = new Pool({
+/* const pool = new Pool({
   user: process.env.DB_USER,
   host: process.env.DB_HOST,
   database: process.env.DB_NAME,
   password: process.env.DB_PASSWORD,
   port: process.env.DB_PORT,
   ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : false
-});
+}); */
 
 // Test Database Connection
 pool.connect()
