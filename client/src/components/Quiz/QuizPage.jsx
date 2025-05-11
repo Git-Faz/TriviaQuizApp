@@ -96,13 +96,14 @@ const QuizPage = () => {
     if (timerRef.current) clearInterval(timerRef.current);
 
     if (userAnswers.length !== questions.length) {
+      // eslint-disable-next-line no-undef
       alert(`Please answer all ${questions.length} questions`);
       return;
     }
 
     const quiz_id = `quiz-${Date.now()}`;
     try {
-      const response = await fetch('${API_URL}/submit-quiz', {
+      const response = await fetch(`${API_URL}/submit-quiz`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -118,7 +119,7 @@ const QuizPage = () => {
 
       if (!response.ok) {
         if (response.status === 401) {
-          navigate(`/account?category=${encodeURIComponent(decodedCategory)}`);
+          navigate(`${API_URL}/account?category=${encodeURIComponent(decodedCategory)}`);
           return;
         }
         throw new Error('Failed to submit quiz');
