@@ -4,6 +4,7 @@ import UserInfo from './UserInfo';
 import QuizStats from './QuizStats';
 import EditUser from './EditUser';
 import NavigationButtons from './NavigationButtons';
+import { API_URL } from '../../config';
 
 const UserProfile = () => {
   const [showEditForm, setShowEditForm] = useState(false);
@@ -17,7 +18,7 @@ const UserProfile = () => {
 
   useEffect(() => {
     // Fetch user basic info
-    fetch('http://localhost:3001/api/user', {
+    fetch(`${API_URL}/api/user`, {
       method: 'GET',
       credentials: 'include'
     })
@@ -47,7 +48,7 @@ const UserProfile = () => {
     });
 
     // Fetch quiz statistics
-    fetch('http://localhost:3001/quiz-stats', {
+    fetch(`${API_URL}/quiz-stats`, {
       method: 'GET',
       credentials: 'include'
     })
@@ -106,7 +107,7 @@ const UserProfile = () => {
   const handleSubmit = (e) => {
     e.preventDefault();
     
-    fetch('http://localhost:3001/api/update-profile', {
+    fetch(`${API_URL}/api/update-profile`, {
       method: 'PUT',
       credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
@@ -135,7 +136,7 @@ const UserProfile = () => {
   };
 
   const handleLogout = () => {
-    fetch('http://localhost:3001/logout', {
+    fetch(`${API_URL}/logout`, {
       method: 'GET',
       credentials: 'include'
     })

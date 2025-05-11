@@ -2,9 +2,10 @@ import { useState, useEffect } from 'react';
 import { HomeBtn } from '../common/Button';
 import AddQuestion from './AddQuestion';
 import ViewQuestions from './ViewQuestions';
+import { API_URL } from '../../config';
 
 const AdminPanel = () => {
-  const baseUrl = 'http://localhost:3001';
+  const baseUrl = API_URL;
   const [questions, setQuestions] = useState([]);
   const [viewCategory, setViewCategory] = useState('');
 

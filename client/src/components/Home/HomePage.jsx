@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import CategorySelection from './CategorySelection';
 import Navbar from '../Layout/Navbar';
 import neonBlue from '../../assets/neonBlue.jpg';
+import { API_URL } from '../../config';
 
 const HomePage = () => {
   const [selectedCategory, setSelectedCategory] = useState(null);
@@ -19,7 +20,7 @@ const HomePage = () => {
       window.history.replaceState({}, document.title, location.pathname);
     }
 
-    fetch('http://localhost:3001/api/user', {
+    fetch(`${API_URL}/api/user`, {
       method: 'GET',
       credentials: 'include'
     })
@@ -42,7 +43,7 @@ const HomePage = () => {
   };
 
   const checkLoginAndStartQuiz = (category) => {
-    fetch('http://localhost:3001/api/user', {
+    fetch(`${API_URL}/api/user`, {
       method: 'GET',
       credentials: 'include'
     })
@@ -60,6 +61,7 @@ const HomePage = () => {
       })
       .catch((error) => {
         navigate(`/account?category=${encodeURIComponent(category)}`);
+        console.error('Failed to fetch user data:', error);
       });
   };
 

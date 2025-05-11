@@ -13,7 +13,7 @@ const CategorySelection = ({ onSelectCategory, selectedCategory }) => {
       {categories.map((category) => (
         <button
           key={category.id}
-          className={`py-2 px-4 rounded font-bold text-black ${
+          className={`py-2 px-4 h-15 w-auto rounded font-bold text-lg text-black text-center items-center ${
             selectedCategory === category.id
               ? 'bg-blue-600 text-white'
               : 'bg-[#3bc7ff] text-black hover:bg-blue-600 hover:text-white'

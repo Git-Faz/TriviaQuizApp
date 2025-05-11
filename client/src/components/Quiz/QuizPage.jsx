@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import Question from './Question';
 import QuizResults from './QuizResults';
 import neonBlue from '../../assets/neonBlue.jpg';
+import { API_URL } from '../../config';
 
 const QuizPage = () => {
   const { category } = useParams();
@@ -23,7 +24,7 @@ const QuizPage = () => {
     setIsLoading(true);
     setError(null);
     try {
-      const response = await fetch(`http://localhost:3001/questions?category=${encodeURIComponent(decodedCategory)}`, {
+      const response = await fetch(`${API_URL}/questions?category=${encodeURIComponent(decodedCategory)}`, {
         method: 'GET',
         credentials: 'include'
       });
@@ -101,7 +102,7 @@ const QuizPage = () => {
 
     const quiz_id = `quiz-${Date.now()}`;
     try {
-      const response = await fetch('http://localhost:3001/submit-quiz', {
+      const response = await fetch('${API_URL}/submit-quiz', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -134,7 +135,7 @@ const QuizPage = () => {
 
   const fetchQuizResults = useCallback(async (quizId) => {
     try {
-      const response = await fetch(`http://localhost:3001/quiz-results/${quizId}`, {
+      const response = await fetch(`${API_URL}/quiz-results/${quizId}`, {
         method: 'GET',
         credentials: 'include'
       });

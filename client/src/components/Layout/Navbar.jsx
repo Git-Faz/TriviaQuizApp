@@ -1,11 +1,11 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-
+import {API_URL} from '../../config';
 const Navbar = ({ userData, showManageQuiz = false }) => {
   const navigate = useNavigate();
 
   const handleProfileClick = () => {
-    fetch('http://localhost:3001/api/user', {
+    fetch(`${API_URL}/api/user`, {
       method: 'GET',
       credentials: 'include'
     })
@@ -36,7 +36,7 @@ const Navbar = ({ userData, showManageQuiz = false }) => {
   };
 
   const handleLogoutClick = () => {
-    fetch('http://localhost:3001/logout', {
+    fetch(`${API_URL}/logout`, {
       method: 'GET',
       credentials: 'include'
     })

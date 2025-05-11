@@ -3,7 +3,9 @@ import mysql from 'mysql2';
 import session from 'express-session';
 import bodyParser from 'body-parser';
 import cors from 'cors';
+import dotenv from 'dotenv';
 
+dotenv.config();
 const app = express();
 
 app.use(session({
