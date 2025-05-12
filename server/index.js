@@ -57,6 +57,9 @@ const pool = new Pool({
   ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : false
 }); */
 
+// Get the session cookie name from environment or use default
+const sessionCookieName = process.env.SESSION_COOKIE_NAME || 'connect.sid';
+
 // Session Middleware
 app.use(session({
   store: new PgSession({
@@ -64,6 +67,7 @@ app.use(session({
     tableName: 'session',
     createTableIfMissing: true // Automatically create the session table if missing
   }),
+  name: sessionCookieName, // Set explicit cookie name for better control
   secret: process.env.SESSION_SECRET || 'fallback-secret-for-dev', // Never use fallback in production
   resave: false,
   saveUninitialized: false,
@@ -120,6 +124,12 @@ app.post('/register', async (req, res) => {
   }
 
   try {
+    // Check if email already exists
+    const emailCheck = await pool.query('SELECT id FROM users WHERE email = $1', [email]);
+    if (emailCheck.rows.length > 0) {
+      return res.status(409).json({ error: "Email already registered" });
+    }
+
     // Hash the password
     const saltRounds = 10;
     const hashedPassword = await bcrypt.hash(password, saltRounds);
@@ -139,14 +149,6 @@ app.post('/register', async (req, res) => {
       console.log('Session after registration:', req.session.id);
       console.log('User in session:', req.session.user);
       
-      // Set a visible cookie to verify cookie transmission works
-      res.cookie('user_logged_in', 'true', {
-        sameSite: 'none',
-        secure: true,
-        httpOnly: true, // Make it visible in the browser for testing
-        maxAge: 24 * 60 * 60 * 1000
-      });
-      
       res.json({ 
         message: 'Registration successful', 
         user: req.session.user,
@@ -163,12 +165,16 @@ app.post('/register', async (req, res) => {
 app.post('/login', async (req, res) => {
   const { email, password } = req.body;
 
+  if (!email || !password) {
+    return res.status(400).json({ error: "Email and password are required" });
+  }
+
   try {
     const query = 'SELECT * FROM users WHERE email = $1';
     const result = await pool.query(query, [email]);
 
     if (result.rows.length === 0) {
-      return res.status(401).json({ error: 'User not registered' });
+      return res.status(401).json({ error: 'Invalid email or password' });
     }
 
     const user = result.rows[0];
@@ -192,14 +198,6 @@ app.post('/login', async (req, res) => {
         console.log('Session after login:', req.session.id);
         console.log('User in session:', req.session.user);
         
-        // Set a visible cookie to verify cookie transmission works
-        res.cookie('user_logged_in', 'true', {
-          sameSite: 'none',
-          secure: true,
-          httpOnly: true, // Make it visible in the browser for testing
-          maxAge: 24 * 60 * 60 * 1000
-        });
-        
         res.json({ 
           message: 'Login successful', 
           user: req.session.user,
@@ -207,7 +205,7 @@ app.post('/login', async (req, res) => {
         });
       });
     } else {
-      res.status(401).json({ error: 'Invalid password' });
+      res.status(401).json({ error: 'Invalid email or password' });
     }
   } catch (err) {
     console.error('Login error:', err.stack);
@@ -215,15 +213,26 @@ app.post('/login', async (req, res) => {
   }
 });
 
-// Logout
+// Logout - FIXED
 app.post('/logout', (req, res) => {
-  if (!req.session) {
-    return res.status(400).json({ error: "No active session" });
+  if (!req.session || !req.session.user) {
+    return res.status(200).json({ message: "Already logged out" });
   }
   
   // Store session ID before destroying it
   const sessionID = req.session.id;
   
+  // Get the cookie options to properly clear the cookie
+  const cookieOptions = {
+    path: '/',
+    sameSite: 'none',
+    secure: true,
+    httpOnly: true
+  };
+  
+  console.log(`Destroying session ${sessionID}`);
+  
+  // Properly destroy the session
   req.session.destroy(err => {
     if (err) {
       console.error('Logout error:', err.stack);
@@ -231,26 +240,19 @@ app.post('/logout', (req, res) => {
     }
     
     // Clear the session cookie with the same settings used to create it
-    res.clearCookie('connect.sid', {
+    res.clearCookie(sessionCookieName, cookieOptions);
+    
+    // Also clear any other cookies you set
+    res.clearCookie('user_logged_in', {
       path: '/',
       sameSite: 'none',
       secure: true,
       httpOnly: true
     });
     
-    // Also clear any other cookies you set, like the user_logged_in cookie
-    res.clearCookie('user_logged_in', {
-      path: '/',
-      sameSite: 'none',
-      secure: true
-    });
-    
     console.log(`Session ${sessionID} destroyed successfully`);
-    res.json({ message: "Logged out successfully" });
+    res.status(200).json({ message: "Logged out successfully" });
   });
-  
-  // Clear the req.session object too
-  req.session = null;
 });
 
 // Edit Profile (with bcrypt for password updates)
@@ -262,38 +264,47 @@ app.put('/api/update-profile', refreshSession, async (req, res) => {
   const { user_id } = req.session.user;
   const { username, email, password } = req.body;
 
-  let query = 'UPDATE users SET ';
-  const fields = [];
-  const values = [];
-  let paramCounter = 1;
-
-  if (username) {
-    fields.push(`username = $${paramCounter}`);
-    values.push(username);
-    paramCounter++;
-  }
-  if (email) {
-    fields.push(`email = $${paramCounter}`);
-    values.push(email);
-    paramCounter++;
-  }
-  if (password) {
-    // Hash the new password
-    const saltRounds = 10;
-    const hashedPassword = await bcrypt.hash(password, saltRounds);
-    fields.push(`password = $${paramCounter}`);
-    values.push(hashedPassword);
-    paramCounter++;
-  }
-
-  if (fields.length === 0) {
+  // Validate at least one field is provided
+  if (!username && !email && !password) {
     return res.status(400).json({ error: "No fields to update" });
   }
 
-  query += fields.join(', ') + ` WHERE id = $${paramCounter}`;
-  values.push(user_id);
-
   try {
+    // Check if email already exists (if email is being updated)
+    if (email && email !== req.session.user.email) {
+      const emailCheck = await pool.query('SELECT id FROM users WHERE email = $1 AND id != $2', [email, user_id]);
+      if (emailCheck.rows.length > 0) {
+        return res.status(409).json({ error: "Email already registered" });
+      }
+    }
+
+    let query = 'UPDATE users SET ';
+    const fields = [];
+    const values = [];
+    let paramCounter = 1;
+
+    if (username) {
+      fields.push(`username = $${paramCounter}`);
+      values.push(username);
+      paramCounter++;
+    }
+    if (email) {
+      fields.push(`email = $${paramCounter}`);
+      values.push(email);
+      paramCounter++;
+    }
+    if (password) {
+      // Hash the new password
+      const saltRounds = 10;
+      const hashedPassword = await bcrypt.hash(password, saltRounds);
+      fields.push(`password = $${paramCounter}`);
+      values.push(hashedPassword);
+      paramCounter++;
+    }
+
+    query += fields.join(', ') + ` WHERE id = $${paramCounter}`;
+    values.push(user_id);
+
     await pool.query(query, values);
     
     // Update the session data
@@ -401,9 +412,6 @@ app.post('/admin/add-question', isAdmin, async (req, res) => {
       correct_option, normalizedCategory
     ]);
     
-    // Touch the session to refresh its expiry
-    req.session.touch();
-    
     res.json({ message: "Question added successfully!", question_id: result.rows[0].id });
   } catch (err) {
     console.error("Database error:", err.stack);
@@ -445,9 +453,6 @@ app.delete('/admin/delete-question/:id', isAdmin, async (req, res) => {
     if (result.rowCount === 0) {
       return res.status(404).json({ error: 'Question not found' });
     }
-
-    // Touch the session to refresh its expiry
-    req.session.touch();
     
     res.json({ message: 'Question deleted successfully' });
   } catch (err) {
@@ -534,15 +539,6 @@ app.post('/submit-quiz', refreshSession, async (req, res) => {
       // Commit transaction
       await client.query('COMMIT');
       
-      // Touch the session to refresh its expiry
-      req.session.touch();
-      req.session.save(err => {
-        if (err) {
-          console.error('Session save error:', err);
-          // Continue anyway as the quiz submission worked
-        }
-      });
-      
       res.json({
         message: "Quiz submitted successfully",
         score: correctAnswers,
@@ -621,6 +617,11 @@ app.get('/quiz-stats', refreshSession, async (req, res) => {
     console.error('Database error:', err.stack);
     return res.status(500).json({ error: "Failed to fetch quiz statistics" });
   }
+});
+
+// Health check endpoint
+app.get('/health', (req, res) => {
+  res.status(200).json({ status: 'OK', timestamp: new Date().toISOString() });
 });
 
 // Error Handling Middleware
