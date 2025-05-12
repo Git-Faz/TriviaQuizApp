@@ -23,15 +23,19 @@ app.use(compression()); // Compress responses
 app.use(cors({
   origin: (origin, callback) => {
     console.log('CORS Origin:', origin);
-    if (!origin || origin === process.env.CLIENT_URL) {
+    // Allow your Vercel frontend URL explicitly
+    const allowedOrigins = [process.env.CLIENT_URL];
+    if (!origin || allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
       callback(new Error('Not allowed by CORS'));
     }
   },
-  credentials: true
+  credentials: true, // This is crucial for cookies to be sent and received
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
 }));
-
+app.set('trust proxy', 1);
 // Body Parsing Middleware
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.json());
@@ -53,16 +57,18 @@ const pool = new Pool({
 // Session Middleware
 app.use(session({
   store: new PgSession({
-    pool: pool, // Use the same PostgreSQL pool
-    tableName: 'session', // Ensure this table exists
+    pool: pool,
+    tableName: 'session',
+    createTableIfMissing: true // Automatically create the session table if missing
   }),
-  secret: process.env.SESSION_SECRET,
+  secret: process.env.SESSION_SECRET || 'fallback-secret-for-dev', // Never use fallback in production
   resave: false,
   saveUninitialized: false,
+  proxy: true, // Trust the reverse proxy
   cookie: {
-    sameSite: 'none',
-    secure: process.env.NODE_ENV === 'production', // Must be true for HTTPS on Railway
-    httpOnly: true,
+    sameSite: 'none', // Required for cross-site cookies
+    secure: true,     // Must be true with sameSite: 'none'
+    httpOnly: true,   // Prevents JavaScript access
     maxAge: 24 * 60 * 60 * 1000 // 1 day
   }
 }));
@@ -90,7 +96,6 @@ function isAdmin(req, res, next) {
   }
   next();
 }
-
 // User Registration (with bcrypt)
 app.post('/register', async (req, res) => {
   const { username, email, password, role = 'user' } = req.body;
@@ -137,8 +142,31 @@ app.post('/login', async (req, res) => {
         email: user.email, 
         role: user.role 
       };
-      console.log('Session after login:', req.session); // Debug
-      res.json({ message: 'Login successful', user: req.session.user });
+      
+      // Force session save before responding
+      req.session.save(err => {
+        if (err) {
+          console.error('Session save error:', err);
+          return res.status(500).json({ error: 'Session save failed' });
+        }
+        
+        console.log('Session after login:', req.session.id);
+        console.log('User in session:', req.session.user);
+        
+        // Set a visible cookie to verify cookie transmission works
+        res.cookie('user_logged_in', 'true', {
+          sameSite: 'none',
+          secure: true,
+          httpOnly: false, // Make it visible in the browser for testing
+          maxAge: 24 * 60 * 60 * 1000
+        });
+        
+        res.json({ 
+          message: 'Login successful', 
+          user: req.session.user,
+          sessionID: req.session.id
+        });
+      });
     } else {
       res.status(401).json({ error: 'Invalid password' });
     }
@@ -147,7 +175,6 @@ app.post('/login', async (req, res) => {
     return res.status(500).json({ error: 'Login failed' });
   }
 });
-
 // Logout
 app.post('/logout', (req, res) => {
   req.session.destroy(err => {
