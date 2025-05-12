@@ -143,7 +143,7 @@ app.post('/register', async (req, res) => {
       res.cookie('user_logged_in', 'true', {
         sameSite: 'none',
         secure: true,
-        httpOnly: false, // Make it visible in the browser for testing
+        httpOnly: true, // Make it visible in the browser for testing
         maxAge: 24 * 60 * 60 * 1000
       });
       
@@ -196,7 +196,7 @@ app.post('/login', async (req, res) => {
         res.cookie('user_logged_in', 'true', {
           sameSite: 'none',
           secure: true,
-          httpOnly: false, // Make it visible in the browser for testing
+          httpOnly: true, // Make it visible in the browser for testing
           maxAge: 24 * 60 * 60 * 1000
         });
         
@@ -248,6 +248,9 @@ app.post('/logout', (req, res) => {
     console.log(`Session ${sessionID} destroyed successfully`);
     res.json({ message: "Logged out successfully" });
   });
+  
+  // Clear the req.session object too
+  req.session = null;
 });
 
 // Edit Profile (with bcrypt for password updates)
