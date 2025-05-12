@@ -8,6 +8,9 @@ import dotenv from 'dotenv';
 import helmet from 'helmet';
 import compression from 'compression';
 import bcrypt from 'bcryptjs';
+import connectPgSimple from 'connect-pg-simple';
+
+const PgSession = connectPgSimple(session);
 
 dotenv.config();
 const app = express();
@@ -18,19 +21,31 @@ app.use(compression()); // Compress responses
 
 // Session Middleware
 app.use(session({
+  store: new PgSession({
+    pool: pool, // Use the same PostgreSQL pool
+    tableName: 'session', // Ensure this table exists
+  }),
   secret: process.env.SESSION_SECRET,
   resave: false,
   saveUninitialized: false,
-  cookie: { 
-    sameSite: 'lax',
-    secure: false,
-    //secure: process.env.NODE_ENV === 'production' // Secure cookies in production (HTTPS)
+  cookie: {
+    sameSite: 'none',
+    secure: process.env.NODE_ENV === 'production', // Must be true for HTTPS on Railway
+    httpOnly: true,
+    maxAge: 24 * 60 * 60 * 1000 // 1 day
   }
 }));
 
 // CORS Middleware
 app.use(cors({
-  origin: process.env.CLIENT_URL,
+  origin: (origin, callback) => {
+    console.log('CORS Origin:', origin);
+    if (!origin || origin === process.env.CLIENT_URL) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true
 }));
 
@@ -62,7 +77,10 @@ pool.connect()
   .catch(err => {
     console.error('Database connection failed:', err.stack);
   });
-
+  
+pool.on('error', (err, client) => {
+  console.error('Unexpected error on idle client:', err.stack);
+});
 // Middleware to Check if User is an Admin
 function isAdmin(req, res, next) {
   console.log('Session data:', req.session);
@@ -121,6 +139,7 @@ app.post('/login', async (req, res) => {
         email: user.email, 
         role: user.role 
       };
+      console.log('Session after login:', req.session); // Debug
       res.json({ message: 'Login successful', user: req.session.user });
     } else {
       res.status(401).json({ error: 'Invalid password' });
