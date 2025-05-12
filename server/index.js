@@ -19,23 +19,6 @@ const app = express();
 app.use(helmet()); // Secure HTTP headers
 app.use(compression()); // Compress responses
 
-// Session Middleware
-app.use(session({
-  store: new PgSession({
-    pool: pool, // Use the same PostgreSQL pool
-    tableName: 'session', // Ensure this table exists
-  }),
-  secret: process.env.SESSION_SECRET,
-  resave: false,
-  saveUninitialized: false,
-  cookie: {
-    sameSite: 'none',
-    secure: process.env.NODE_ENV === 'production', // Must be true for HTTPS on Railway
-    httpOnly: true,
-    maxAge: 24 * 60 * 60 * 1000 // 1 day
-  }
-}));
-
 // CORS Middleware
 app.use(cors({
   origin: (origin, callback) => {
@@ -67,7 +50,22 @@ const pool = new Pool({
   port: process.env.DB_PORT,
   ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : false
 }); */
-
+// Session Middleware
+app.use(session({
+  store: new PgSession({
+    pool: pool, // Use the same PostgreSQL pool
+    tableName: 'session', // Ensure this table exists
+  }),
+  secret: process.env.SESSION_SECRET,
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    sameSite: 'none',
+    secure: process.env.NODE_ENV === 'production', // Must be true for HTTPS on Railway
+    httpOnly: true,
+    maxAge: 24 * 60 * 60 * 1000 // 1 day
+  }
+}));
 // Test Database Connection
 pool.connect()
   .then(client => {
@@ -77,7 +75,7 @@ pool.connect()
   .catch(err => {
     console.error('Database connection failed:', err.stack);
   });
-  
+
 pool.on('error', (err, client) => {
   console.error('Unexpected error on idle client:', err.stack);
 });
