@@ -9,11 +9,11 @@ const CategorySelection = ({ onSelectCategory, selectedCategory }) => {
   ];
 
   return (
-    <div className="grid grid-cols-2 gap-4 p-6">
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-3 sm:p-6">
       {categories.map((category) => (
         <button
           key={category.id}
-          className={`py-2 px-4 h-15 w-auto rounded font-bold text-lg text-black text-center items-center ${
+          className={`py-2 px-4 h-auto rounded font-bold text-lg text-black text-center items-center ${
             selectedCategory === category.id
               ? 'bg-blue-600 text-white'
               : 'bg-[#3bc7ff] text-black hover:bg-blue-600 hover:text-white'

@@ -210,8 +210,8 @@ const QuizPage = () => {
     >
       <div className="w-full max-w-3xl">
         {!quizSubmitted ? (
-          <div className="quiz-container bg-black text-white shadow-[0_0_10px_#3bc7ff] rounded-lg w-full h-fit p-[20px_30px] text-center">
-            <div className="fixed flex flex-shrink flex-wrap top-2 right-2 w-fit text-lg font-bold text-center bg-[#3bc7ff] text-black px-3 py-1 border-2 border-black rounded-md z-20">
+          <div className="quiz-container bg-black text-white shadow-[0_0_10px_#3bc7ff] rounded-lg w-full h-fit p-4 sm:p-[20px_30px] text-center">
+            <div className="fixed flex flex-shrink flex-wrap top-2 right-2 w-fit text-base sm:text-lg font-bold text-center bg-[#3bc7ff] text-black px-2 sm:px-3 py-1 border-2 border-black rounded-md z-20">
               Time Left: {formatTime(timeLeft)}
             </div>
             <div className="quiz-heading">

@@ -44,15 +44,15 @@ const Question = ({ question, index, onSelectAnswer, selectedOption, quizSubmitt
   };
 
   return (
-    <div className="question mb-6 p-4 shadow-[0_2px_5px_#3bc7ff] rounded-lg border-b-4 border-[#3bc7ff]" data-question-id={question.id}>
-      <h3 className="text-xl font-bold text-white mb-2 u">
+    <div className="question mb-4 sm:mb-6 p-3 sm:p-4 shadow-[0_2px_5px_#3bc7ff] rounded-lg border-b-4 border-[#3bc7ff]" data-question-id={question.id}>
+      <h3 className="text-lg sm:text-xl font-bold text-white mb-2">
         {index + 1}. {question.question_text}
       </h3>
       <div className="space-y-2">
         {options.map((option) => (
           <label
             key={option.value}
-            className={`flex items-center ${getOptionClasses(option)} cursor-pointer`}
+            className={`flex items-center ${getOptionClasses(option)} cursor-pointer text-sm sm:text-base`}
           >
             <input
               type="radio"

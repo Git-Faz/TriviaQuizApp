@@ -24,7 +24,7 @@ app.use(cors({
   origin: (origin, callback) => {
     console.log('CORS Origin:', origin);
     // Allow your Vercel frontend URL explicitly
-    const allowedOrigins = [process.env.CLIENT_URL];
+    const allowedOrigins = [process.env.CLIENT_URL,'http://localhost:5173','http://localhost:4173'];
     if (!origin || allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
