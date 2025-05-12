@@ -37,7 +37,7 @@ const Navbar = ({ userData, showManageQuiz = false }) => {
 
   const handleLogoutClick = () => {
     fetch(`${API_URL}/logout`, {
-      method: 'GET',
+      method: 'POST',
       credentials: 'include'
     })
       .then(response => {
