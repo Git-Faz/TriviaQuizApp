@@ -35,7 +35,9 @@ app.use(cors({
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
+
 app.set('trust proxy', 1);
+
 // Body Parsing Middleware
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.json());
@@ -54,6 +56,7 @@ const pool = new Pool({
   port: process.env.DB_PORT,
   ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : false
 }); */
+
 // Session Middleware
 app.use(session({
   store: new PgSession({
@@ -72,6 +75,7 @@ app.use(session({
     maxAge: 24 * 60 * 60 * 1000 // 1 day
   }
 }));
+
 // Test Database Connection
 pool.connect()
   .then(client => {
@@ -85,6 +89,16 @@ pool.connect()
 pool.on('error', (err, client) => {
   console.error('Unexpected error on idle client:', err.stack);
 });
+
+// Middleware to refresh session on protected routes
+function refreshSession(req, res, next) {
+  if (req.session && req.session.user) {
+    // Touch the session to refresh its expiry
+    req.session.touch();
+  }
+  next();
+}
+
 // Middleware to Check if User is an Admin
 function isAdmin(req, res, next) {
   console.log('Session data:', req.session);
@@ -96,6 +110,7 @@ function isAdmin(req, res, next) {
   }
   next();
 }
+
 // User Registration (with bcrypt)
 app.post('/register', async (req, res) => {
   const { username, email, password, role = 'user' } = req.body;
@@ -113,7 +128,31 @@ app.post('/register', async (req, res) => {
     const result = await pool.query(query, [username, email, hashedPassword, role]);
     
     req.session.user = { user_id: result.rows[0].id, username, email, role };
-    res.json({ message: 'Registration successful', user: req.session.user });
+    
+    // Force session save before responding
+    req.session.save(err => {
+      if (err) {
+        console.error('Session save error:', err);
+        return res.status(500).json({ error: 'Session save failed' });
+      }
+      
+      console.log('Session after registration:', req.session.id);
+      console.log('User in session:', req.session.user);
+      
+      // Set a visible cookie to verify cookie transmission works
+      res.cookie('user_logged_in', 'true', {
+        sameSite: 'none',
+        secure: true,
+        httpOnly: false, // Make it visible in the browser for testing
+        maxAge: 24 * 60 * 60 * 1000
+      });
+      
+      res.json({ 
+        message: 'Registration successful', 
+        user: req.session.user,
+        sessionID: req.session.id
+      });
+    });
   } catch (err) {
     console.error('Error inserting user:', err.stack);
     return res.status(500).json({ error: 'Registration failed' });
@@ -175,20 +214,44 @@ app.post('/login', async (req, res) => {
     return res.status(500).json({ error: 'Login failed' });
   }
 });
+
 // Logout
 app.post('/logout', (req, res) => {
+  if (!req.session) {
+    return res.status(400).json({ error: "No active session" });
+  }
+  
+  // Store session ID before destroying it
+  const sessionID = req.session.id;
+  
   req.session.destroy(err => {
     if (err) {
       console.error('Logout error:', err.stack);
       return res.status(500).json({ error: "Logout failed" });
     }
-    res.clearCookie('connect.sid');
+    
+    // Clear the session cookie with the same settings used to create it
+    res.clearCookie('connect.sid', {
+      path: '/',
+      sameSite: 'none',
+      secure: true,
+      httpOnly: true
+    });
+    
+    // Also clear any other cookies you set, like the user_logged_in cookie
+    res.clearCookie('user_logged_in', {
+      path: '/',
+      sameSite: 'none',
+      secure: true
+    });
+    
+    console.log(`Session ${sessionID} destroyed successfully`);
     res.json({ message: "Logged out successfully" });
   });
 });
 
 // Edit Profile (with bcrypt for password updates)
-app.put('/api/update-profile', async (req, res) => {
+app.put('/api/update-profile', refreshSession, async (req, res) => {
   if (!req.session.user) {
     return res.status(401).json({ error: "Not logged in" });
   }
@@ -230,18 +293,74 @@ app.put('/api/update-profile', async (req, res) => {
   try {
     await pool.query(query, values);
     
+    // Update the session data
     if (username) req.session.user.username = username;
     if (email) req.session.user.email = email;
-
-    res.json({
-      username: req.session.user.username,
-      email: req.session.user.email
+    
+    // Force session save before responding
+    req.session.save(err => {
+      if (err) {
+        console.error('Session save error:', err);
+        return res.status(500).json({ error: 'Session save failed' });
+      }
+      
+      res.json({
+        message: "Profile updated successfully",
+        user: {
+          username: req.session.user.username,
+          email: req.session.user.email
+        }
+      });
     });
   } catch (err) {
     console.error('Error updating profile:', err.stack);
     return res.status(500).json({ error: "Failed to update profile" });
   }
 });
+
+// Check Session - New route to verify session status
+app.get('/api/check-session', (req, res) => {
+  console.log('Session check - Session ID:', req.session.id);
+  console.log('Session check - User data:', req.session.user);
+  
+  if (!req.session.user) {
+    return res.status(401).json({ 
+      authenticated: false,
+      message: "No active session"
+    });
+  }
+  
+  res.json({
+    authenticated: true,
+    user: {
+      user_id: req.session.user.user_id,
+      username: req.session.user.username,
+      email: req.session.user.email,
+      role: req.session.user.role
+    }
+  });
+});
+
+// Check User Role
+app.get('/api/user', refreshSession, (req, res) => {
+  console.log('Getting user data - Session ID:', req.session.id);
+  
+  if (!req.session.user) {
+    return res.status(401).json({ error: "Not logged in" });
+  }
+  
+  const { user_id, username, email, role } = req.session.user;
+  res.json({ 
+    user_id, 
+    username, 
+    email, 
+    role,
+    sessionActive: true
+  });
+});
+
+// Admin Routes
+app.use('/admin', refreshSession);
 
 // Admin: Get Questions by Category
 app.get('/admin/questions', isAdmin, async (req, res) => {
@@ -278,6 +397,9 @@ app.post('/admin/add-question', isAdmin, async (req, res) => {
       question_text, option_a, option_b, option_c, option_d, 
       correct_option, normalizedCategory
     ]);
+    
+    // Touch the session to refresh its expiry
+    req.session.touch();
     
     res.json({ message: "Question added successfully!", question_id: result.rows[0].id });
   } catch (err) {
@@ -321,6 +443,9 @@ app.delete('/admin/delete-question/:id', isAdmin, async (req, res) => {
       return res.status(404).json({ error: 'Question not found' });
     }
 
+    // Touch the session to refresh its expiry
+    req.session.touch();
+    
     res.json({ message: 'Question deleted successfully' });
   } catch (err) {
     console.error('Database error:', err.stack);
@@ -328,18 +453,8 @@ app.delete('/admin/delete-question/:id', isAdmin, async (req, res) => {
   }
 });
 
-// Check User Role
-app.get('/api/user', (req, res) => {
-  if (!req.session.user) {
-    return res.status(401).json({ error: "Not logged in" });
-  }
-
-  const { user_id, username, email, role } = req.session.user;
-  res.json({ user_id, username, email, role });
-});
-
 // Load Quiz
-app.get('/questions', async (req, res) => {
+app.get('/questions', refreshSession, async (req, res) => {
   if (!req.session.user) {
     return res.status(401).json({ error: "User not logged in" });
   }
@@ -360,10 +475,14 @@ app.get('/questions', async (req, res) => {
 });
 
 // Submit Quiz
-app.post('/submit-quiz', async (req, res) => {
+app.post('/submit-quiz', refreshSession, async (req, res) => {
+  console.log('Submit quiz - Session ID:', req.session.id);
+  console.log('Submit quiz - User data:', req.session.user);
+  
   if (!req.session.user) {
     return res.status(401).json({ error: "User not logged in" });
   }
+  
   const { user_id } = req.session.user;
   const { quiz_id, category, answers } = req.body;
 
@@ -412,6 +531,15 @@ app.post('/submit-quiz', async (req, res) => {
       // Commit transaction
       await client.query('COMMIT');
       
+      // Touch the session to refresh its expiry
+      req.session.touch();
+      req.session.save(err => {
+        if (err) {
+          console.error('Session save error:', err);
+          // Continue anyway as the quiz submission worked
+        }
+      });
+      
       res.json({
         message: "Quiz submitted successfully",
         score: correctAnswers,
@@ -431,7 +559,7 @@ app.post('/submit-quiz', async (req, res) => {
 });
 
 // Fetch Quiz Results
-app.get('/quiz-results/:quiz_id', async (req, res) => {
+app.get('/quiz-results/:quiz_id', refreshSession, async (req, res) => {
   if (!req.session.user) {
     return res.status(401).json({ error: "User not logged in" });
   }
@@ -455,7 +583,7 @@ app.get('/quiz-results/:quiz_id', async (req, res) => {
 });
 
 // Get User Quiz Statistics
-app.get('/quiz-stats', async (req, res) => {
+app.get('/quiz-stats', refreshSession, async (req, res) => {
   if (!req.session.user) {
     return res.status(401).json({ error: "Not logged in" });
   }
