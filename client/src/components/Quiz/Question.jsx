@@ -32,23 +32,23 @@ const Question = ({ question, index, onSelectAnswer, selectedOption, quizSubmitt
     const isSelected = selectedOption === option.value;
     const isCorrect = option.value === question.correct_option;
     if (isSelected && isCorrect) {
-      return 'bg-green-100 text-black p-2 rounded-md border-2 border-green-500 block my-1 sm:my-2 md:my-3 lg:my-4 xl:my-5';
+      return 'bg-green-100 text-black p-2 rounded border-2 border-green-500 block my-1';
     }
     if (isSelected && !isCorrect) {
-      return 'bg-red-100 text-black p-2 rounded-md border-2 border-red-500 block my-1 sm:my-2 md:my-3 lg:my-4 xl:my-5';
+      return 'bg-red-100 text-black p-2 rounded border-2 border-red-500 block my-1';
     }
     if (!isSelected && isCorrect) {
-      return 'bg-green-100 text-black p-2 rounded-md border-2 border-green-500 block my-1 sm:my-2 md:my-3 lg:my-4 xl:my-5';
+      return 'bg-green-100 text-black p-2 rounded border-2 border-green-500 block my-1';
     }
     return 'text-white';
   };
 
   return (
-    <div className="question mb-6 p-4 shadow-lg rounded-lg border-b-4 border-[#3bc7ff] md:p-6 lg:p-8 xl:p-10">
-      <h3 className="text-xl font-bold text-white mb-2 md:mb-4 lg:mb-6 xl:mb-8">
+    <div className="question mb-6 p-4 shadow-[0_2px_5px_#3bc7ff] rounded-lg border-b-4 border-[#3bc7ff]" data-question-id={question.id}>
+      <h3 className="text-xl font-bold text-white mb-2 u">
         {index + 1}. {question.question_text}
       </h3>
-      <div className="space-y-2 md:space-y-4 lg:space-y-6 xl:space-y-8">
+      <div className="space-y-2">
         {options.map((option) => (
           <label
             key={option.value}
