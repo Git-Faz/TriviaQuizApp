@@ -33,7 +33,7 @@ app.use(cors({
   },
   credentials: true, // This is crucial for cookies to be sent and received
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With',]
 }));
 
 app.set('trust proxy', 1);
@@ -624,6 +624,24 @@ app.get('/health', (req, res) => {
   res.status(200).json({ status: 'OK', timestamp: new Date().toISOString() });
 });
 
+app.get('/api/debug-session', (req, res) => {
+  res.json({
+    sessionExists: !!req.session,
+    sessionID: req.session?.id || 'none',
+    hasUser: !!req.session?.user,
+    cookieSettings: {
+      maxAge: req.session?.cookie?.maxAge,
+      httpOnly: req.session?.cookie?.httpOnly,
+      secure: req.session?.cookie?.secure,
+      sameSite: req.session?.cookie?.sameSite
+    },
+    headers: {
+      'user-agent': req.headers['user-agent'],
+      'origin': req.headers.origin,
+      'host': req.headers.host
+    }
+  });
+});
 // Error Handling Middleware
 app.use((err, req, res, next) => {
   console.error('Unexpected error:', err.stack);
