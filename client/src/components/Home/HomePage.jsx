@@ -67,23 +67,23 @@ const HomePage = () => {
 
   return (
     <div
-      className="flex flex-col justify-start items-center min-h-screen bg-black/75 bg-blend-overlay bg-center bg-cover"
+      className="flex flex-col justify-center items-center min-h-screen bg-black/75 bg-blend-overlay bg-center bg-cover"
       style={{ backgroundImage: `url(${neonBlue})` }}
     >
-      <div className="quiz-container my-auto p-6 bg-gray-900 rounded-lg w-screen max-w-[75%] h-screen">
+      <div className="quiz-container my-auto p-6 bg-gray-900 rounded-lg md:w-1/2 sm:w-3/4 w-11/12 h-screen">
         <Navbar userData={userData} showManageQuiz={userData?.role === 'admin'} />
-        <h1 className="text-6xl font-bold text-[#3bc7ff] mb-4 text-center">Trivia Challenge</h1>
-        <p className="text-white mb-6 text-center">
+        <h1 className="text-6xl font-bold text-[#3bc7ff] mb-4 text-center md:text-8xl">Trivia Challenge</h1>
+        <p className="text-white mb-6 text-center md:text-2xl">
           Test your knowledge across various topics and have fun!
         </p>
-        <h3 className="text-lg text-white mb-4 text-center">Select a Category</h3>
+        <h3 className="text-lg text-white mb-4 text-center md:text-3xl">Select a Category</h3>
         <CategorySelection
           onSelectCategory={handleCategorySelect}
           selectedCategory={selectedCategory}
         />
         <button
         id='startBtn'
-          className={`w-full py-2 rounded font-bold text-white `}
+          className={`w-full py-2 rounded font-bold text-white md:text-2xl`}
           disabled={!selectedCategory}
           onClick={() => checkLoginAndStartQuiz(selectedCategory)}
         >
