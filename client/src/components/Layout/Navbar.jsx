@@ -37,24 +37,31 @@ const Navbar = ({ userData, showManageQuiz = false }) => {
   };
 
   const handleLogoutClick = () => {
-    fetch(`${API_URL}/logout`, {
-      method: 'GET',
-      credentials: 'include'
+  fetch(`${API_URL}/logout`, {
+    method: 'POST',  // FIXED: Changed from GET to POST
+    credentials: 'include',
+    headers: {
+      'Content-Type': 'application/json'
+    }
+  })
+    .then(response => {
+      if (!response.ok) throw new Error('Logout failed');
+      return response.json();
     })
-      .then(response => {
-        if (!response.ok) throw new Error('Logout failed');
-        return response.json();
-      })
-      .then(() => {
-        alert('Logged out!');
-        navigate('/account');
-      })
-      .catch(error => {
-        console.error('Logout failed:', error);
-        alert('Logout failed: ' + error.message);
-        navigate('/account');
-      });
-  };
+    .then(() => {
+      // Clear any local storage or state related to authentication
+      // For example, if you're using localStorage:
+      localStorage.removeItem('user');
+      
+      alert('Logged out!');
+      navigate('/account');
+    })
+    .catch(error => {
+      console.error('Logout failed:', error);
+      alert('Logout failed: ' + error.message);
+      navigate('/account');
+    });
+};
 
   return (
     <div className="flex flex-col sm:flex-row justify-between items-center p-2 mb-4 sm:mb-8 w-full gap-2">
