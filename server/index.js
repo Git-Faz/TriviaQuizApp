@@ -32,9 +32,10 @@ app.use(cors({
       callback(new Error('Not allowed by CORS'));
     }
   },
-  credentials: true, // This is crucial for cookies to be sent and received
+  credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With',]
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin', 'Access-Control-Allow-Headers', 'Access-Control-Allow-Origin', 'Access-Control-Allow-Credentials'],
+  exposedHeaders: ['Access-Control-Allow-Origin', 'Access-Control-Allow-Credentials']
 }));
 
 // Body Parsing Middleware
@@ -64,20 +65,27 @@ app.use(session({
   store: new PgSession({
     pool: pool,
     tableName: 'session',
-    createTableIfMissing: true // Automatically create the session table if missing
+    createTableIfMissing: true
   }),
-  name: sessionCookieName, // Set explicit cookie name for better control
-  secret: process.env.SESSION_SECRET || 'fallback-secret-for-dev', // Never use fallback in production
+  name: sessionCookieName,
+  secret: process.env.SESSION_SECRET || 'fallback-secret-for-dev',
   resave: false,
   saveUninitialized: false,
-  proxy: true, // Trust the reverse proxy
+  proxy: true,
   cookie: {
-    sameSite: 'none', 
-    secure: true,     
-    httpOnly: true,   
-    maxAge: 24 * 60 * 60 * 1000 // 1 day
+    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+    secure: process.env.NODE_ENV === 'production',
+    httpOnly: true,
+    maxAge: 24 * 60 * 60 * 1000,
+    path: '/'
   }
 }));
+
+// Add specific headers for Safari compatibility
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Credentials', 'true');
+  next();
+});
 
 // Test Database Connection
 pool.connect()

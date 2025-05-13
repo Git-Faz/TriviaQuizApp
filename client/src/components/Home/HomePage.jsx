@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import  { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import CategorySelection from './CategorySelection';
 import Navbar from '../Layout/Navbar';
@@ -67,7 +67,7 @@ const HomePage = () => {
 
   return (
     <div
-      className="flex flex-col justify-start items-center min-h-screen bg-black/75 bg-blend-overlay bg-center bg-cover"
+      className="flex flex-col justify-start items-center min-h-screen lg:bg-black/75 bg-blend-overlay bg-center bg-cover"
       style={{ backgroundImage: `url(${neonBlue})` }}
     >
       <div className="quiz-container my-auto p-4 sm:p-6 bg-gray-900 rounded-lg w-full max-w-full sm:max-w-[90%] md:max-w-[80%] lg:max-w-[75%] h-screen overflow-y-auto">
