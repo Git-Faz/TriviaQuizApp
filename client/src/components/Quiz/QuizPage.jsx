@@ -1,8 +1,9 @@
-import React, { useState, useEffect, useRef, useCallback, useContext } from 'react';
+import { useState, useEffect, useRef, useCallback, useContext } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import Question from './Question';
 import QuizResults from './QuizResults';
 import neonBlue from '../../assets/neonBlue.avif';
+import { AuthContext } from '../../Context/AuthContext';
 import { API_URL } from '../../config';
 
 const QuizPage = () => {

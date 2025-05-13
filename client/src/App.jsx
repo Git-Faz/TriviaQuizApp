@@ -5,6 +5,7 @@ import AccountPage from './components/Account/AccountPage';
 import QuizPage from './components/Quiz/QuizPage';
 import UserProfile from './components/UserProfile/UserProfile';
 import AdminPanel from './components/Admin/AdminPanel';
+import { AuthProvider } from './Context/AuthContext';
 
 const App = () => {
   return (
