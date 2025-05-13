@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import LoginForm from './LoginForm';
 import RegisterForm from './RegisterForm';
+import neonBlue from '../../assets/neonBlue.avif';
 
 const AccountPage = () => {
   const [activeForm, setActiveForm] = useState('login');
@@ -26,7 +27,7 @@ const AccountPage = () => {
   return (
     <div 
       className="font-sans bg-black/75 bg-blend-overlay bg-center bg-cover flex justify-center items-center h-screen m-0"
-      style={{ backgroundImage: "url('src/assets/neonBlue.jpg')" }}
+      style={{ backgroundImage: `url(${neonBlue})` }}
     >
       <div className="bg-black p-8 rounded-lg shadow-md w-full max-w-md">
         {activeForm === 'login' ? (

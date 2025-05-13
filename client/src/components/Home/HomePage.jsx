@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import CategorySelection from './CategorySelection';
 import Navbar from '../Layout/Navbar';
-import neonBlue from '../../assets/neonBlue.jpg';
+import neonBlue from '../../assets/neonBlue.avif';
 import { API_URL } from '../../config';
 
 const HomePage = () => {

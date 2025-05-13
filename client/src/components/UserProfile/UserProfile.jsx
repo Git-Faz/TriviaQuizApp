@@ -4,6 +4,7 @@ import UserInfo from './UserInfo';
 import QuizStats from './QuizStats';
 import EditUser from './EditUser';
 import NavigationButtons from './NavigationButtons';
+import neonBlue from '../../assets/neonBlue.avif';
 import { API_URL } from '../../config';
 
 const UserProfile = () => {
@@ -156,7 +157,7 @@ const UserProfile = () => {
 
   return (
     <div className="flex flex-col justify-center items-center h-screen bg-black/75 bg-blend-overlay bg-center bg-cover bg-repeat-y"
-      style={{ backgroundImage: "url('src/assets/neonBlue.jpg')" }}
+      style={{ backgroundImage: `url(${neonBlue})` }}
     >
       <div className="flex flex-col justify-evenly content-center w-fit h-fit bg-black text-white p-10 rounded-lg shadow-lg text-center">
         <UserInfo username={userData.username} email={userData.email} />
