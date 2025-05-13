@@ -1,5 +1,3 @@
-import React from 'react';
-
 const CategorySelection = ({ onSelectCategory, selectedCategory }) => {
   const categories = [
     { id: 'Computer Science', name: 'Computer Science' },

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 
 const Question = ({ question, index, onSelectAnswer, selectedOption, quizSubmitted }) => {
   // State to store shuffled options

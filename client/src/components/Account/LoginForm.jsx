@@ -1,6 +1,6 @@
-import React, { useState, useContext } from 'react';
+import  { useState, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
-import AuthContext from '../../context/AuthContext';
+import AuthContext from '../../Context/AuthContext';
 
 const LoginForm = ({ toggleForms, redirectCategory }) => {
   const [formData, setFormData] = useState({

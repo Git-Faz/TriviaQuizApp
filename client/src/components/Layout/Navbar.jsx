@@ -1,7 +1,6 @@
 import { useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
-import AuthContext from '../../context/AuthContext';
-
+import AuthContext from '../../Context/AuthContext';
 const Navbar = ({ showManageQuiz = false }) => {
   const navigate = useNavigate();
   const { user, logout, refreshUser } = useContext(AuthContext);

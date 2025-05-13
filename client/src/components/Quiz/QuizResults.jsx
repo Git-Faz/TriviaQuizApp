@@ -1,4 +1,3 @@
-import React from 'react';
 import { HomeBtn, LogoutBtn } from '../common/Button';
 const QuizResults = ({ quizResults, userAnswers, questions }) => {
   if (!quizResults || !questions.length) {
