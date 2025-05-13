@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useCallback, useContext } from 'rea
 import { useParams, useNavigate } from 'react-router-dom';
 import Question from './Question';
 import QuizResults from './QuizResults';
-import neonBlue from '../../assets/neonBlue.jpg';
+import neonBlue from '../../assets/neonBlue.avif';
 import { API_URL } from '../../config';
 import AuthContext from '../../context/AuthContext';
 
