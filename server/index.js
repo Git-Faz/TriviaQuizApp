@@ -15,6 +15,7 @@ const PgSession = connectPgSimple(session);
 dotenv.config();
 const app = express();
 
+app.set('trust proxy', 1);
 // Middleware: Security and Performance
 app.use(helmet()); // Secure HTTP headers
 app.use(compression()); // Compress responses
@@ -35,8 +36,6 @@ app.use(cors({
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With',]
 }));
-
-app.set('trust proxy', 1);
 
 // Body Parsing Middleware
 app.use(bodyParser.urlencoded({ extended: true }));
@@ -73,9 +72,9 @@ app.use(session({
   saveUninitialized: false,
   proxy: true, // Trust the reverse proxy
   cookie: {
-    sameSite: 'none', // Required for cross-site cookies
-    secure: true,     // Must be true with sameSite: 'none'
-    httpOnly: true,   // Prevents JavaScript access
+    sameSite: 'none', 
+    secure: true,     
+    httpOnly: true,   
     maxAge: 24 * 60 * 60 * 1000 // 1 day
   }
 }));
