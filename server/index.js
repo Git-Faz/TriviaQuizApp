@@ -34,8 +34,8 @@ app.use(cors({
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin', 'Access-Control-Allow-Headers', 'Access-Control-Allow-Origin', 'Access-Control-Allow-Credentials'],
-  exposedHeaders: ['Access-Control-Allow-Origin', 'Access-Control-Allow-Credentials']
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
+  exposedHeaders: ['Set-Cookie', 'Date', 'ETag']
 }));
 
 // Body Parsing Middleware
@@ -69,21 +69,36 @@ app.use(session({
   }),
   name: sessionCookieName,
   secret: process.env.SESSION_SECRET || 'fallback-secret-for-dev',
-  resave: false,
-  saveUninitialized: false,
+  resave: true,
+  saveUninitialized: true,
   proxy: true,
   cookie: {
-    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
-    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'none',
+    secure: true,
     httpOnly: true,
     maxAge: 24 * 60 * 60 * 1000,
-    path: '/'
+    path: '/',
+    domain: process.env.COOKIE_DOMAIN || undefined
   }
 }));
 
-// Add specific headers for Safari compatibility
+// Ensure CORS headers are set before any response
 app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Credentials', 'true');
+  const origin = req.headers.origin;
+  const allowedOrigins = [process.env.CLIENT_URL, 'http://localhost:5173', 'http://localhost:4173'];
+  
+  if (origin && allowedOrigins.includes(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+  }
+  
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  res.setHeader('Access-Control-Allow-Methods', 'GET,HEAD,PUT,PATCH,POST,DELETE');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin');
+  
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+  
   next();
 });
 
