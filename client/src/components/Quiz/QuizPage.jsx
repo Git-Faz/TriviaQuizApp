@@ -253,11 +253,6 @@ const QuizPage = () => {
                 >
                   Home
                 </button>
-                {user && (
-                  <div className="text-white text-sm">
-                    Playing as: <span className="font-bold text-[#3bc7ff]">{user.username}</span>
-                  </div>
-                )}
               </div>
             </div>
             <div className="space-y-6">
