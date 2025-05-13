@@ -1,13 +1,16 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useContext } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import Question from './Question';
 import QuizResults from './QuizResults';
 import neonBlue from '../../assets/neonBlue.jpg';
 import { API_URL } from '../../config';
+import AuthContext from '../../context/AuthContext';
 
 const QuizPage = () => {
   const { category } = useParams();
   const navigate = useNavigate();
+  const { user, loading: authLoading } = useContext(AuthContext);
+  
   const [questions, setQuestions] = useState([]);
   const [userAnswers, setUserAnswers] = useState([]);
   const [quizSubmitted, setQuizSubmitted] = useState(false);
@@ -20,7 +23,18 @@ const QuizPage = () => {
   const decodedCategory = decodeURIComponent(category);
   const displayCategory = decodedCategory === 'GK' ? 'General Knowledge' : decodedCategory;
 
+  // Check authentication first before fetching questions
+  useEffect(() => {
+    if (!authLoading && !user) {
+      setError('Please log in to take the quiz');
+      navigate(`/account?category=${encodeURIComponent(decodedCategory)}`);
+    }
+  }, [authLoading, user, navigate, decodedCategory]);
+
   const fetchQuestions = useCallback(async () => {
+    // Don't fetch if user isn't authenticated yet
+    if (authLoading || !user) return;
+    
     setIsLoading(true);
     setError(null);
     try {
@@ -52,7 +66,7 @@ const QuizPage = () => {
       setError(`Failed to load questions: ${err.message}`);
       setIsLoading(false);
     }
-  }, [decodedCategory, navigate]);
+  }, [decodedCategory, navigate, user, authLoading]);
 
   useEffect(() => {
     fetchQuestions();
@@ -119,7 +133,7 @@ const QuizPage = () => {
 
       if (!response.ok) {
         if (response.status === 401) {
-          navigate(`${API_URL}/account?category=${encodeURIComponent(decodedCategory)}`);
+          navigate(`/account?category=${encodeURIComponent(decodedCategory)}`);
           return;
         }
         throw new Error('Failed to submit quiz');
@@ -165,6 +179,22 @@ const QuizPage = () => {
     const secs = seconds % 60;
     return `${minutes}:${secs < 10 ? '0' : ''}${secs}`;
   };
+
+  // Show loading spinner while checking authentication
+  if (authLoading) {
+    return (
+      <div 
+        className="flex flex-row justify-center m-0 min-h-screen bg-black/75 bg-blend-overlay bg-center bg-cover bg-repeat-y py-8 overflow-auto"
+        style={{ backgroundImage: `url(${neonBlue})` }}
+      >
+        <div className="w-full max-w-3xl">
+          <div className="quiz-container bg-black text-white shadow-[0_0_10px_#3bc7ff] rounded-lg w-full h-fit p-[20px_30px] text-center">
+            <h2 className="text-2xl font-bold text-[#3bc7ff]">Checking authentication...</h2>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (error) {
     return (
@@ -216,12 +246,19 @@ const QuizPage = () => {
             </div>
             <div className="quiz-heading">
               <h2 className="mr-2 w-full text-black bg-[#3bc7ff] text-2xl flex justify-center py-2.5 px-5 rounded-md font-bold">{displayCategory} Quiz</h2>
-              <button
-                className="ml-2 text-green-500 bg-black border-green-500 border-2 hover:bg-green-500 hover:text-black text-lg flex justify-center py-2.5 px-5 rounded-md font-bold"
-                onClick={() => navigate('/')}
-              >
-                Home
-              </button>
+              <div className="flex justify-between items-center mt-2">
+                <button
+                  className="ml-2 text-green-500 bg-black border-green-500 border-2 hover:bg-green-500 hover:text-black text-lg flex justify-center py-2.5 px-5 rounded-md font-bold"
+                  onClick={() => navigate('/')}
+                >
+                  Home
+                </button>
+                {user && (
+                  <div className="text-white text-sm">
+                    Playing as: <span className="font-bold text-[#3bc7ff]">{user.username}</span>
+                  </div>
+                )}
+              </div>
             </div>
             <div className="space-y-6">
               {questions.map((question, index) => (

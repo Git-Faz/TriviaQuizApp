@@ -1,12 +1,14 @@
-import React, { useState } from 'react';
+import React, { useState, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { API_URL } from '../../config';
+import AuthContext from '../../context/AuthContext';
+
 const LoginForm = ({ toggleForms, redirectCategory }) => {
   const [formData, setFormData] = useState({
     email: '',
     password: ''
   });
   const navigate = useNavigate();
+  const { login } = useContext(AuthContext);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -20,20 +22,10 @@ const LoginForm = ({ toggleForms, redirectCategory }) => {
     e.preventDefault();
     
     try {
-      const response = await fetch(`${API_URL}/login`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(formData),
-        credentials: 'include'
-      });
+      // Use the login function from context instead of direct fetch
+      await login(formData.email, formData.password);
       
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.error || 'Login failed');
-      }
-      
+      // Navigate after successful login
       if (redirectCategory) {
         navigate(`/?category=${encodeURIComponent(redirectCategory)}`);
       } else {

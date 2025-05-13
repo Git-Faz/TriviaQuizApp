@@ -5,10 +5,11 @@ import AccountPage from './components/Account/AccountPage';
 import QuizPage from './components/Quiz/QuizPage';
 import UserProfile from './components/UserProfile/UserProfile';
 import AdminPanel from './components/Admin/AdminPanel';
-
+import { AuthProvider } from './context/AuthContext';
 
 const App = () => {
   return (
+    <AuthProvider>
     <Router>
       <Routes>
         <Route path="/" element={<HomePage />} />
@@ -21,6 +22,7 @@ const App = () => {
         <Route path="*" element={<HomePage />} />
       </Routes>
     </Router>
+    </AuthProvider>
   );
 }
 
