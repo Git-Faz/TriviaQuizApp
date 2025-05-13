@@ -24,8 +24,7 @@ app.use(compression()); // Compress responses
 app.use(cors({
   origin: (origin, callback) => {
     console.log('CORS Origin:', origin);
-    // Allow your Vercel frontend URL explicitly
-    const allowedOrigins = [process.env.CLIENT_URL,'http://localhost:5173','http://localhost:4173'];
+    const allowedOrigins = [process.env.CLIENT_URL, 'http://localhost:5173', 'http://localhost:4173'];
     if (!origin || allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
@@ -84,21 +83,7 @@ app.use(session({
 
 // Ensure CORS headers are set before any response
 app.use((req, res, next) => {
-  const origin = req.headers.origin;
-  const allowedOrigins = [process.env.CLIENT_URL, 'http://localhost:5173', 'http://localhost:4173'];
-  
-  if (origin && allowedOrigins.includes(origin)) {
-    res.setHeader('Access-Control-Allow-Origin', origin);
-  }
-  
-  res.setHeader('Access-Control-Allow-Credentials', 'true');
-  res.setHeader('Access-Control-Allow-Methods', 'GET,HEAD,PUT,PATCH,POST,DELETE');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin');
-  
-  if (req.method === 'OPTIONS') {
-    return res.status(200).end();
-  }
-  
+  res.header('Access-Control-Allow-Credentials', 'true');
   next();
 });
 
