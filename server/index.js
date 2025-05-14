@@ -16,8 +16,28 @@ dotenv.config();
 const app = express();
 
 app.set('trust proxy', 1);
-// Middleware: Security and Performance
-//app.use(helmet()); // Secure HTTP headers
+
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      imgSrc: ["'self'", "data:"],
+      connectSrc: ["'self'"],
+      fontSrc: ["'self'"],
+      objectSrc: ["'none'"],
+      mediaSrc: ["'self'"],
+      frameSrc: ["'self'"],
+    },
+  },
+  crossOriginEmbedderPolicy: false,
+  crossOriginOpenerPolicy: false,
+  crossOriginResourcePolicy: false,
+  xssFilter: true,
+  hidePoweredBy: true,
+  referrerPolicy: { policy: 'no-referrer-when-downgrade' }
+}));
 app.use(compression()); // Compress responses
 
 // CORS Middleware
@@ -58,15 +78,6 @@ const pool = new Pool({
   ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : false
 });
 
-/* const pool = new Pool({
-  user: process.env.DB_USER,
-  host: process.env.DB_HOST,
-  database: process.env.DB_NAME,
-  password: process.env.DB_PASSWORD,
-  port: process.env.DB_PORT,
-  ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : false
-}); */
-
 // Get the session cookie name from environment or use default
 const sessionCookieName = process.env.SESSION_COOKIE_NAME || 'connect.sid';
 
@@ -79,16 +90,14 @@ app.use(session({
   }),
   name: sessionCookieName,
   secret: process.env.SESSION_SECRET || 'fallback-secret-for-dev',
-  resave: true,
-  saveUninitialized: true,
+  resave: false,
+  saveUninitialized: false,
   proxy: true,
   cookie: {
-    sameSite: 'none',
-    secure: true,
+    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',  // Conditional based on environment
+    secure: process.env.NODE_ENV === 'production',  // Conditional based on environment
     httpOnly: true,
-    maxAge: 24 * 60 * 60 * 1000,
-    path: '/',
-    domain: process.env.COOKIE_DOMAIN || undefined
+    maxAge: 24 * 60 * 60 * 1000
   }
 }));
 
@@ -135,7 +144,8 @@ function isAdmin(req, res, next) {
 
 // User Registration (with bcrypt)
 app.post('/register', async (req, res) => {
-  const { username, email, password, role = 'user' } = req.body;
+  const { username, email, password, role } = req.body;
+  const userRole = 'user';
 
   if (!username || !email || !password) {
     return res.status(400).json({ error: "All fields are required." });
@@ -153,7 +163,7 @@ app.post('/register', async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, saltRounds);
 
     const query = 'INSERT INTO users (username, email, password, role) VALUES ($1, $2, $3, $4) RETURNING id';
-    const result = await pool.query(query, [username, email, hashedPassword, role]);
+    const result = await pool.query(query, [username, email, hashedPassword, userRole]);
     
     req.session.user = { user_id: result.rows[0].id, username, email, role };
     
@@ -237,38 +247,22 @@ app.post('/logout', (req, res) => {
     return res.status(200).json({ message: "Already logged out" });
   }
   
-  // Store session ID before destroying it
-  const sessionID = req.session.id;
-  
-  // Get the cookie options to properly clear the cookie
-  const cookieOptions = {
-    path: '/',
-    sameSite: 'none',
-    secure: true,
-    httpOnly: true
-  };
-  
-  console.log(`Destroying session ${sessionID}`);
-  
-  // Properly destroy the session
   req.session.destroy(err => {
     if (err) {
       console.error('Logout error:', err.stack);
       return res.status(500).json({ error: "Logout failed" });
     }
     
-    // Clear the session cookie with the same settings used to create it
-    res.clearCookie(sessionCookieName, cookieOptions);
+    // Use the same sameSite setting as in session configuration
+    const sameSiteSetting = process.env.NODE_ENV === 'production' ? 'none' : 'lax';
     
-    // Also clear any other cookies you set
-    res.clearCookie('user_logged_in', {
+    res.clearCookie(sessionCookieName, {
       path: '/',
-      sameSite: 'none',
-      secure: true,
+      sameSite: sameSiteSetting,
+      secure: process.env.NODE_ENV === 'production',
       httpOnly: true
     });
     
-    console.log(`Session ${sessionID} destroyed successfully`);
     res.status(200).json({ message: "Logged out successfully" });
   });
 });
