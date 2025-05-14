@@ -52,7 +52,7 @@ app.use(cors({
     'Accept-Encoding', // Added for compression
     'Content-Length', // For request body size
     'If-None-Match', // For ETag-based caching
-    'User-Agent' // For client identification
+    'User-Agent', // For client identification
     ],
   exposedHeaders: ['Set-Cookie', 'Date', 'ETag']
 }));

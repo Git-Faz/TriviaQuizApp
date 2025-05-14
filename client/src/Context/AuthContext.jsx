@@ -30,7 +30,7 @@ export const AuthProvider = ({ children }) => {
         const data = await response.json();
         
         if (data.authenticated && data.user) {
-          console.log('User authenticated:', data.user);
+          //console.log('User authenticated:', data.user);
           setUser(data.user);
         } else {
           console.log('No authenticated user');
