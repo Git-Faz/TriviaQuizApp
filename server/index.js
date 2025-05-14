@@ -29,22 +29,19 @@ app.use(cors({
       'http://localhost:5173', 
       'http://localhost:4173'
     ];
-    
-    // Log the CLIENT_URL environment variable to verify it's correct
+
     console.log('CLIENT_URL:', process.env.CLIENT_URL);
-    
-    // More permissive check that handles null, undefined, and empty string
-    if (origin === null || origin === undefined || origin === '' || allowedOrigins.includes(origin)) {
+
+    if (!origin || allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
-      // Log rejected origins to help with debugging
       console.log('Rejected Origin:', origin);
       callback(new Error('Not allowed by CORS'));
     }
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin','expires'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin', 'Expires', 'Cache-Control'],
   exposedHeaders: ['Set-Cookie', 'Date', 'ETag']
 }));
 
