@@ -17,27 +17,7 @@ const app = express();
 
 app.set('trust proxy', 1);
 
-app.use(helmet({
-  contentSecurityPolicy: {
-    directives: {
-      defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
-      styleSrc: ["'self'", "'unsafe-inline'"],
-      imgSrc: ["'self'", "data:"],
-      connectSrc: ["'self'"],
-      fontSrc: ["'self'"],
-      objectSrc: ["'none'"],
-      mediaSrc: ["'self'"],
-      frameSrc: ["'self'"],
-    },
-  },
-  crossOriginEmbedderPolicy: false,
-  crossOriginOpenerPolicy: false,
-  crossOriginResourcePolicy: false,
-  xssFilter: true,
-  hidePoweredBy: true,
-  referrerPolicy: { policy: 'no-referrer-when-downgrade' }
-}));
+app.use(helmet());
 app.use(compression()); // Compress responses
 
 // CORS Middleware
