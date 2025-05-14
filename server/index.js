@@ -41,7 +41,19 @@ app.use(cors({
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin', 'Expires', 'Cache-Control'],
+  allowedHeaders: ['Content-Type', 
+    'Authorization', 
+    'X-Requested-With', 
+    'Accept', 
+    'Origin', 
+    'Expires', 
+    'Cache-Control',
+    'Pragma', // Added for cache control
+    'Accept-Encoding', // Added for compression
+    'Content-Length', // For request body size
+    'If-None-Match', // For ETag-based caching
+    'User-Agent' // For client identification
+    ],
   exposedHeaders: ['Set-Cookie', 'Date', 'ETag']
 }));
 
