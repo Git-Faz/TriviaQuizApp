@@ -17,7 +17,7 @@ const app = express();
 
 app.set('trust proxy', 1);
 // Middleware: Security and Performance
-app.use(helmet()); // Secure HTTP headers
+//app.use(helmet()); // Secure HTTP headers
 app.use(compression()); // Compress responses
 
 // CORS Middleware
