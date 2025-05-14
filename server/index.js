@@ -24,10 +24,21 @@ app.use(compression()); // Compress responses
 app.use(cors({
   origin: (origin, callback) => {
     console.log('CORS Origin:', origin);
-    const allowedOrigins = [process.env.CLIENT_URL, 'http://localhost:5173', 'http://localhost:4173'];
-    if (!origin || allowedOrigins.includes(origin)) {
+    const allowedOrigins = [
+      process.env.CLIENT_URL, 
+      'http://localhost:5173', 
+      'http://localhost:4173'
+    ];
+    
+    // Log the CLIENT_URL environment variable to verify it's correct
+    console.log('CLIENT_URL:', process.env.CLIENT_URL);
+    
+    // More permissive check that handles null, undefined, and empty string
+    if (origin === null || origin === undefined || origin === '' || allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
+      // Log rejected origins to help with debugging
+      console.log('Rejected Origin:', origin);
       callback(new Error('Not allowed by CORS'));
     }
   },
