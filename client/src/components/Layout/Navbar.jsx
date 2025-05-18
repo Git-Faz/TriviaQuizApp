@@ -43,7 +43,7 @@ const Navbar = ({ showManageQuiz = false }) => {
   return (
     <div className="flex justify-between items-center p-2.5 mb-8 w-full">
       <button
-        className="flex p1.5 justify-center items-center text-center box-border rounded-md
+        className="flex p-1.5 justify-center items-center text-center box-border rounded-md
         border-solid w-fit h-fit border-2 border-green-600 text-green-600 font-bold hover:bg-green-600 hover:text-white hover:font-bold cursor-pointer"
         onClick={handleProfileClick}
       >
