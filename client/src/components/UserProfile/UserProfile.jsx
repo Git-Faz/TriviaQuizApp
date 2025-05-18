@@ -104,7 +104,7 @@ const UserProfile = () => {
   };
 
   return (
-    <div className="flex flex-col justify-center items-center h-screen bg-black/75 bg-blend-overlay bg-center bg-cover bg-repeat-y"
+    <div className="flex flex-col justify-center items-center h-screen w-screen bg-black/75 bg-blend-overlay bg-center bg-cover bg-repeat-y"
       style={{ backgroundImage: `url(${neonBlue})` }}
     >
       <div className="flex flex-col justify-evenly content-center w-fit h-fit bg-black text-white p-10 rounded-lg shadow-lg text-center">
