@@ -1,15 +1,15 @@
-import { useState, useEffect, useRef, useCallback, useContext } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import Question from './Question';
 import QuizResults from './QuizResults';
 import neonBlue from '../../assets/neonBlue.avif';
-import { AuthContext } from '../../Context/AuthContext';
-import { API_URL } from '../../config';
+import { useAuthContext } from '../../Context/AuthContext';
+import { quizService } from '../../services';
 
 const QuizPage = () => {
   const { category } = useParams();
   const navigate = useNavigate();
-  const { user, loading: authLoading } = useContext(AuthContext);
+  const { user, loading: authLoading, isAuthenticated } = useAuthContext();
   
   const [questions, setQuestions] = useState([]);
   const [userAnswers, setUserAnswers] = useState([]);
@@ -25,34 +25,21 @@ const QuizPage = () => {
 
   // Check authentication first before fetching questions
   useEffect(() => {
-    if (!authLoading && !user) {
+    if (!authLoading && !isAuthenticated) {
       setError('Please log in to take the quiz');
       navigate(`/account?category=${encodeURIComponent(decodedCategory)}`);
     }
-  }, [authLoading, user, navigate, decodedCategory]);
+  }, [authLoading, isAuthenticated, navigate, decodedCategory]);
 
   const fetchQuestions = useCallback(async () => {
     // Don't fetch if user isn't authenticated yet
-    if (authLoading || !user) return;
+    if (authLoading || !isAuthenticated) return;
     
     setIsLoading(true);
     setError(null);
     try {
-      const response = await fetch(`${API_URL}/questions?category=${encodeURIComponent(decodedCategory)}`, {
-        method: 'GET',
-        credentials: 'include'
-      });
-
-      if (!response.ok) {
-        if (response.status === 401) {
-          setError('Please log in to take the quiz');
-          navigate(`/account?category=${encodeURIComponent(decodedCategory)}`);
-          return;
-        }
-        throw new Error(`HTTP error ${response.status}`);
-      }
-
-      const data = await response.json();
+      const data = await quizService.getQuestions(decodedCategory);
+      
       if (data.length === 0) {
         setError('No questions available for this category');
         setTimeout(() => navigate('/'), 3000);
@@ -63,10 +50,15 @@ const QuizPage = () => {
       setQuestions(shuffledQuestions);
       setIsLoading(false);
     } catch (err) {
+      if (err.response && err.response.status === 401) {
+        setError('Please log in to take the quiz');
+        navigate(`/account?category=${encodeURIComponent(decodedCategory)}`);
+        return;
+      }
       setError(`Failed to load questions: ${err.message}`);
       setIsLoading(false);
     }
-  }, [decodedCategory, navigate, user, authLoading]);
+  }, [decodedCategory, navigate, isAuthenticated, authLoading]);
 
   useEffect(() => {
     fetchQuestions();
@@ -110,54 +102,37 @@ const QuizPage = () => {
     if (timerRef.current) clearInterval(timerRef.current);
 
     if (userAnswers.length !== questions.length) {
-      // eslint-disable-next-line no-undef
       alert(`Please answer all ${questions.length} questions`);
       return;
     }
 
     const quiz_id = `quiz-${Date.now()}`;
     try {
-      const response = await fetch(`${API_URL}/submit-quiz`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({
-          quiz_id,
-          category: decodedCategory,
-          answers: userAnswers.map(({ question_id, selected_option }) => ({
-            question_id,
-            selected_option
-          }))
-        })
-      });
-
-      if (!response.ok) {
-        if (response.status === 401) {
-          navigate(`/account?category=${encodeURIComponent(decodedCategory)}`);
-          return;
-        }
-        throw new Error('Failed to submit quiz');
-      }
-
-      const data = await response.json();
+      const quizData = {
+        quiz_id,
+        category: decodedCategory,
+        answers: userAnswers.map(({ question_id, selected_option }) => ({
+          question_id,
+          selected_option
+        }))
+      };
+      
+      const data = await quizService.submitQuiz(quizData);
       setQuizResults(data);
       setQuizSubmitted(true);
       fetchQuizResults(data.quiz_id);
     } catch (err) {
+      if (err.response && err.response.status === 401) {
+        navigate(`/account?category=${encodeURIComponent(decodedCategory)}`);
+        return;
+      }
       setError(`Failed to submit quiz: ${err.message}`);
     }
   }, [decodedCategory, navigate, questions.length, userAnswers]);
 
   const fetchQuizResults = useCallback(async (quizId) => {
     try {
-      const response = await fetch(`${API_URL}/quiz-results/${quizId}`, {
-        method: 'GET',
-        credentials: 'include'
-      });
-
-      if (!response.ok) throw new Error('Failed to fetch results');
-
-      const resultsData = await response.json();
+      const resultsData = await quizService.getQuizResults(quizId);
       const resultsMap = {};
       resultsData.forEach((result) => {
         resultsMap[result.id] = result;

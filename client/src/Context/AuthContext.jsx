@@ -1,142 +1,119 @@
-// src/context/AuthContext.js
-import React, { createContext, useState, useEffect } from 'react';
-import { API_URL } from '../config';
+import { createContext, useState, useEffect, useContext } from 'react';
+import { authService } from '../Services/ApiService';
 
-export const AuthContext = createContext();
+const AuthContext = createContext();
+
+export const useAuthContext = () => useContext(AuthContext);
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
 
-  // Check if the user is logged in on app load
+  // Load user from localStorage and validate token on initial load
   useEffect(() => {
-    const checkAuth = async () => {
-      try {
-        const response = await fetch(`${API_URL}/api/check-session`, {
-          method: 'GET',
-          credentials: 'include',
-          headers: {
-            'Cache-Control': 'no-cache, no-store, must-revalidate',
-            'Pragma': 'no-cache',
-            'Expires': '0'
-          }
+    const token = localStorage.getItem('token');
+    const storedUser = JSON.parse(localStorage.getItem('user'));
+    
+    if (token && storedUser) {
+      authService.validateToken()
+        .then(() => {
+          setUser(storedUser);
+          setIsAuthenticated(true);
+        })
+        .catch(() => {
+          // Token is invalid, clear localStorage
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+        })
+        .finally(() => {
+          setLoading(false);
         });
-
-        if (!response.ok) {
-          throw new Error('Authentication check failed');
-        }
-
-        const data = await response.json();
-        
-        if (data.authenticated && data.user) {
-          //console.log('User authenticated:', data.user);
-          setUser(data.user);
-        } else {
-          console.log('No authenticated user');
-          setUser(null);
-        }
-      } catch (err) {
-        console.error('Auth check error:', err);
-        setError(err.message);
-        setUser(null);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    checkAuth();
+    } else {
+      setLoading(false);
+    }
   }, []);
 
-  // Login function
+  // Login user
   const login = async (email, password) => {
     try {
-      const response = await fetch(`${API_URL}/login`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ email, password }),
-        credentials: 'include'
-      });
+      const data = await authService.login(email, password);
       
-      const data = await response.json();
+      // Store token and user data in localStorage
+      localStorage.setItem('token', data.token);
+      localStorage.setItem('user', JSON.stringify(data.user));
       
-      if (!response.ok) {
-        throw new Error(data.error || 'Login failed');
-      }
-      
-      // Re-fetch user data to ensure we have the most current info
-      const userResponse = await fetch(`${API_URL}/api/user`, {
-        credentials: 'include'
-      });
-      
-      if (!userResponse.ok) {
-        throw new Error('Failed to fetch user data after login');
-      }
-      
-      const userData = await userResponse.json();
-      setUser(userData);
-      return userData;
-    } catch (err) {
-      setError(err.message);
-      throw err;
+      // Update state
+      setUser(data.user);
+      setIsAuthenticated(true);
+      return data;
+    } catch (error) {
+      console.error('Login error:', error);
+      throw error;
     }
   };
 
-  // Logout function
-  const logout = async () => {
+  // Register user
+  const register = async (userData) => {
     try {
-      const response = await fetch(`${API_URL}/logout`, {
-        method: 'POST',
-        credentials: 'include'
-      });
+      const data = await authService.register(userData);
       
-      if (!response.ok) {
-        throw new Error('Logout failed');
-      }
+      // Store token and user data in localStorage
+      localStorage.setItem('token', data.token);
+      localStorage.setItem('user', JSON.stringify(data.user));
       
-      setUser(null);
-    } catch (err) {
-      setError(err.message);
-      throw err;
+      // Update state
+      setUser(data.user);
+      setIsAuthenticated(true);
+      return data;
+    } catch (error) {
+      console.error('Registration error:', error);
+      throw error;
     }
+  };
+
+  // Logout user
+  const logout = () => {
+    // JWT is stateless, so we just need to remove the token from localStorage
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    
+    // Update state
+    setUser(null);
+    setIsAuthenticated(false);
   };
 
   // Refresh user data
   const refreshUser = async () => {
     try {
-      const response = await fetch(`${API_URL}/api/user`, {
-        credentials: 'include',
-        headers: {
-          'Cache-Control': 'no-cache'
-        }
-      });
+      const data = await authService.getUserProfile();
       
-      if (!response.ok) {
-        throw new Error('Failed to refresh user data');
-      }
-      
-      const userData = await response.json();
-      setUser(userData);
-      return userData;
-    } catch (err) {
-      setError(err.message);
-      throw err;
+      // Update user data in localStorage and state
+      localStorage.setItem('user', JSON.stringify(data));
+      setUser(data);
+      return data;
+    } catch (error) {
+      console.error('Refresh user error:', error);
+      throw error;
     }
   };
 
+  // Get the auth token
+  const getAuthToken = () => {
+    return localStorage.getItem('token');
+  };
+
   return (
-    <AuthContext.Provider 
-      value={{ 
-        user, 
-        loading, 
-        error, 
-        login, 
-        logout, 
-        refreshUser 
-      }}
-    >
+    <AuthContext.Provider value={{ 
+      user, 
+      isAuthenticated, 
+      loading, 
+      login, 
+      logout, 
+      register, 
+      refreshUser, 
+      getAuthToken 
+    }}>
       {children}
     </AuthContext.Provider>
   );

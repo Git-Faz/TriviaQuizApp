@@ -1,4 +1,4 @@
-import  { useState, useContext } from 'react';
+import { useState, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import AuthContext from '../../Context/AuthContext';
 
@@ -7,6 +7,7 @@ const LoginForm = ({ toggleForms, redirectCategory }) => {
     email: '',
     password: ''
   });
+  const [error, setError] = useState('');
   const navigate = useNavigate();
   const { login } = useContext(AuthContext);
 
@@ -16,10 +17,13 @@ const LoginForm = ({ toggleForms, redirectCategory }) => {
       ...prevState,
       [name]: value
     }));
+    // Clear error when user starts typing again
+    if (error) setError('');
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setError('');
     
     try {
       // Use the login function from context instead of direct fetch
@@ -34,13 +38,19 @@ const LoginForm = ({ toggleForms, redirectCategory }) => {
       
     } catch (error) {
       console.error('Login error:', error);
-      alert('Login failed. Please check your credentials and try again.');
+      setError('Login failed. Please check your credentials and try again.');
     }
   };
 
   return (
     <form onSubmit={handleSubmit} className="text-white">
       <h2 className="text-white text-center text-xl font-bold mb-6">Sign In</h2>
+      
+      {error && (
+        <div className="mb-4 p-2 bg-red-700 text-white rounded text-sm">
+          {error}
+        </div>
+      )}
       
       <div className="mb-4">
         <label htmlFor="loginEmail" className="block mb-2 text-white font-bold">Email</label>

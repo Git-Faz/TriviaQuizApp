@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { API_URL } from '../../config';
+
 const RegisterForm = ({ toggleForms }) => {
   const [formData, setFormData] = useState({
     username: '',
@@ -8,6 +9,7 @@ const RegisterForm = ({ toggleForms }) => {
     password: '',
     confirmPassword: ''
   });
+  const [error, setError] = useState('');
   const navigate = useNavigate();
 
   const handleChange = (e) => {
@@ -16,18 +18,20 @@ const RegisterForm = ({ toggleForms }) => {
       ...prevState,
       [name]: value
     }));
+    if (error) setError('');
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setError('');
     
     if (formData.password.length < 8) {
-      alert("Password length must be greater than 8");
+      setError("Password must be at least 8 characters long");
       return;
     }
 
     if (formData.password !== formData.confirmPassword) {
-      alert("Passwords do not match");
+      setError("Passwords do not match");
       return;
     }
     
@@ -41,13 +45,19 @@ const RegisterForm = ({ toggleForms }) => {
           username: formData.username,
           email: formData.email,
           password: formData.password
-        }),
-        credentials: 'include'
+        })
       });
       
       const data = await response.json();
+      
       if (!response.ok) {
         throw new Error(data.error || 'Registration failed');
+      }
+      
+      // Store the JWT token in localStorage
+      if (data.token) {
+        localStorage.setItem('token', data.token);
+        localStorage.setItem('user', JSON.stringify(data.user));
       }
       
       alert("Registered successfully");
@@ -55,13 +65,19 @@ const RegisterForm = ({ toggleForms }) => {
       
     } catch (error) {
       console.error('Registration error:', error);
-      alert('Registration failed. Please try again.');
+      setError(error.message || 'Registration failed. Please try again.');
     }
   };
 
   return (
     <form onSubmit={handleSubmit} className="text-white">
       <h2 className="text-white text-center text-xl font-bold mb-6">Create Account</h2>
+      
+      {error && (
+        <div className="mb-4 p-2 bg-red-700 text-white rounded text-sm">
+          {error}
+        </div>
+      )}
       
       <div className="mb-4">
         <label htmlFor="registerName" className="block mb-2 text-white font-bold">Username</label>

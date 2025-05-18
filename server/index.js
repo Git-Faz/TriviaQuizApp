@@ -1,16 +1,13 @@
 import express from 'express';
 import pkg from 'pg';
 const { Pool } = pkg;
-import session from 'express-session';
 import bodyParser from 'body-parser';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import helmet from 'helmet';
 import compression from 'compression';
 import bcrypt from 'bcryptjs';
-import connectPgSimple from 'connect-pg-simple';
-
-const PgSession = connectPgSimple(session);
+import jwt from 'jsonwebtoken'; // Added JWT import
 
 dotenv.config();
 const app = express();
@@ -67,34 +64,10 @@ const pool = new Pool({
   ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : false
 });
 
-// Get the session cookie name from environment or use default
-const sessionCookieName = process.env.SESSION_COOKIE_NAME || 'connect.sid';
-
-// Session Middleware
-app.use(session({
-  store: new PgSession({
-    pool: pool,
-    tableName: 'session',
-    createTableIfMissing: true
-  }),
-  name: sessionCookieName,
-  secret: process.env.SESSION_SECRET || 'fallback-secret-for-dev',
-  resave: false,
-  saveUninitialized: false,
-  proxy: true,
-  cookie: {
-    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',  // Conditional based on environment
-    secure: process.env.NODE_ENV === 'production',  // Conditional based on environment
-    httpOnly: true,
-    maxAge: 24 * 60 * 60 * 1000
-  }
-}));
-
-// Ensure CORS headers are set before any response
-app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Credentials', 'true');
-  next();
-});
+// JWT Secret from environment or fallback
+const JWT_SECRET = process.env.JWT_SECRET || 'fallback-jwt-secret-for-dev';
+// JWT Expiration duration in seconds (24 hours)
+const JWT_EXPIRES_IN = 24 * 60 * 60;
 
 // Test Database Connection
 pool.connect()
@@ -110,25 +83,48 @@ pool.on('error', (err, client) => {
   console.error('Unexpected error on idle client:', err.stack);
 });
 
-// Middleware to refresh session on protected routes
-function refreshSession(req, res, next) {
-  if (req.session && req.session.user) {
-    // Touch the session to refresh its expiry
-    req.session.touch();
+// Middleware to verify JWT token
+function authenticateToken(req, res, next) {
+  // Get token from Authorization header or query parameter
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN format
+  
+  if (!token) {
+    return res.status(401).json({ error: "Access denied. No token provided." });
   }
-  next();
+
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET);
+    req.user = decoded;
+    next();
+  } catch (err) {
+    return res.status(403).json({ error: "Invalid or expired token." });
+  }
 }
 
 // Middleware to Check if User is an Admin
 function isAdmin(req, res, next) {
-  console.log('Session data:', req.session);
-  console.log('Session user:', req.session.user);
-  console.log('User role:', req.session.user ? req.session.user.role : 'No user in session');
+  console.log('User data:', req.user);
+  console.log('User role:', req.user ? req.user.role : 'No user data');
 
-  if (!req.session.user || req.session.user.role !== 'admin') {
+  if (!req.user || req.user.role !== 'admin') {
     return res.status(403).json({ error: "Access denied. Admins only." });
   }
   next();
+}
+
+// Generate JWT token
+function generateToken(user) {
+  return jwt.sign(
+    { 
+      user_id: user.user_id, 
+      username: user.username, 
+      email: user.email, 
+      role: user.role 
+    }, 
+    JWT_SECRET, 
+    { expiresIn: JWT_EXPIRES_IN }
+  );
 }
 
 // User Registration (with bcrypt)
@@ -154,23 +150,22 @@ app.post('/register', async (req, res) => {
     const query = 'INSERT INTO users (username, email, password, role) VALUES ($1, $2, $3, $4) RETURNING id';
     const result = await pool.query(query, [username, email, hashedPassword, userRole]);
     
-    req.session.user = { user_id: result.rows[0].id, username, email, role };
+    const userData = { 
+      user_id: result.rows[0].id, 
+      username, 
+      email, 
+      role: userRole 
+    };
     
-    // Force session save before responding
-    req.session.save(err => {
-      if (err) {
-        console.error('Session save error:', err);
-        return res.status(500).json({ error: 'Session save failed' });
-      }
-      
-      console.log('Session after registration:', req.session.id);
-      console.log('User in session:', req.session.user);
-      
-      res.json({ 
-        message: 'Registration successful', 
-        user: req.session.user,
-        sessionID: req.session.id
-      });
+    // Generate JWT token
+    const token = generateToken(userData);
+    
+    console.log('User registered:', userData);
+    
+    res.json({ 
+      message: 'Registration successful', 
+      user: userData,
+      token: token
     });
   } catch (err) {
     console.error('Error inserting user:', err.stack);
@@ -198,28 +193,22 @@ app.post('/login', async (req, res) => {
     // Compare hashed password
     const isMatch = await bcrypt.compare(password, user.password);
     if (isMatch) {
-      req.session.user = { 
+      const userData = { 
         user_id: user.id, 
         username: user.username, 
         email: user.email, 
         role: user.role 
       };
       
-      // Force session save before responding
-      req.session.save(err => {
-        if (err) {
-          console.error('Session save error:', err);
-          return res.status(500).json({ error: 'Session save failed' });
-        }
-        
-        console.log('Session after login:', req.session.id);
-        console.log('User in session:', req.session.user);
-        
-        res.json({ 
-          message: 'Login successful', 
-          user: req.session.user,
-          sessionID: req.session.id
-        });
+      // Generate JWT token
+      const token = generateToken(userData);
+      
+      console.log('User logged in:', userData);
+      
+      res.json({ 
+        message: 'Login successful', 
+        user: userData,
+        token: token
       });
     } else {
       res.status(401).json({ error: 'Invalid email or password' });
@@ -230,39 +219,11 @@ app.post('/login', async (req, res) => {
   }
 });
 
-// Logout - FIXED
-app.post('/logout', (req, res) => {
-  if (!req.session || !req.session.user) {
-    return res.status(200).json({ message: "Already logged out" });
-  }
-  
-  req.session.destroy(err => {
-    if (err) {
-      console.error('Logout error:', err.stack);
-      return res.status(500).json({ error: "Logout failed" });
-    }
-    
-    // Use the same sameSite setting as in session configuration
-    const sameSiteSetting = process.env.NODE_ENV === 'production' ? 'none' : 'lax';
-    
-    res.clearCookie(sessionCookieName, {
-      path: '/',
-      sameSite: sameSiteSetting,
-      secure: process.env.NODE_ENV === 'production',
-      httpOnly: true
-    });
-    
-    res.status(200).json({ message: "Logged out successfully" });
-  });
-});
+// Logout is now handled client-side by removing the token
 
 // Edit Profile (with bcrypt for password updates)
-app.put('/api/update-profile', refreshSession, async (req, res) => {
-  if (!req.session.user) {
-    return res.status(401).json({ error: "Not logged in" });
-  }
-
-  const { user_id } = req.session.user;
+app.put('/api/update-profile', authenticateToken, async (req, res) => {
+  const { user_id } = req.user;
   const { username, email, password } = req.body;
 
   // Validate at least one field is provided
@@ -272,7 +233,7 @@ app.put('/api/update-profile', refreshSession, async (req, res) => {
 
   try {
     // Check if email already exists (if email is being updated)
-    if (email && email !== req.session.user.email) {
+    if (email && email !== req.user.email) {
       const emailCheck = await pool.query('SELECT id FROM users WHERE email = $1 AND id != $2', [email, user_id]);
       if (emailCheck.rows.length > 0) {
         return res.status(409).json({ error: "Email already registered" });
@@ -308,24 +269,23 @@ app.put('/api/update-profile', refreshSession, async (req, res) => {
 
     await pool.query(query, values);
     
-    // Update the session data
-    if (username) req.session.user.username = username;
-    if (email) req.session.user.email = email;
+    // Update the user data with new values
+    const updatedUserData = {
+      ...req.user,
+      username: username || req.user.username,
+      email: email || req.user.email
+    };
     
-    // Force session save before responding
-    req.session.save(err => {
-      if (err) {
-        console.error('Session save error:', err);
-        return res.status(500).json({ error: 'Session save failed' });
-      }
-      
-      res.json({
-        message: "Profile updated successfully",
-        user: {
-          username: req.session.user.username,
-          email: req.session.user.email
-        }
-      });
+    // Generate a new token with updated user info
+    const token = generateToken(updatedUserData);
+    
+    res.json({
+      message: "Profile updated successfully",
+      user: {
+        username: updatedUserData.username,
+        email: updatedUserData.email
+      },
+      token: token
     });
   } catch (err) {
     console.error('Error updating profile:', err.stack);
@@ -333,52 +293,39 @@ app.put('/api/update-profile', refreshSession, async (req, res) => {
   }
 });
 
-// Check Session - New route to verify session status
-app.get('/api/check-session', (req, res) => {
-  console.log('Session check - Session ID:', req.session.id);
-  console.log('Session check - User data:', req.session.user);
-  
-  if (!req.session.user) {
-    return res.status(401).json({ 
-      authenticated: false,
-      message: "No active session"
-    });
-  }
+// Check token validity
+app.get('/api/check-token', authenticateToken, (req, res) => {
+  console.log('Token check - User data:', req.user);
   
   res.json({
     authenticated: true,
     user: {
-      user_id: req.session.user.user_id,
-      username: req.session.user.username,
-      email: req.session.user.email,
-      role: req.session.user.role
+      user_id: req.user.user_id,
+      username: req.user.username,
+      email: req.user.email,
+      role: req.user.role
     }
   });
 });
 
-// Check User Role
-app.get('/api/user', refreshSession, (req, res) => {
-  console.log('Getting user data - Session ID:', req.session.id);
+// Get User Info
+app.get('/api/user', authenticateToken, (req, res) => {
+  console.log('Getting user data - User ID:', req.user.user_id);
   
-  if (!req.session.user) {
-    return res.status(401).json({ error: "Not logged in" });
-  }
-  
-  const { user_id, username, email, role } = req.session.user;
+  const { user_id, username, email, role } = req.user;
   res.json({ 
     user_id, 
     username, 
     email, 
-    role,
-    sessionActive: true
+    role
   });
 });
 
 // Admin Routes
-app.use('/admin', refreshSession);
+app.use('/admin', authenticateToken);
 
 // Admin: Get Questions by Category
-app.get('/admin/questions', isAdmin, async (req, res) => {
+app.get('/admin/questions', authenticateToken, isAdmin, async (req, res) => {
   const { category } = req.query;
 
   if (!category) {
@@ -396,7 +343,7 @@ app.get('/admin/questions', isAdmin, async (req, res) => {
 });
 
 // Admin: Add a Question
-app.post('/admin/add-question', isAdmin, async (req, res) => {
+app.post('/admin/add-question', authenticateToken, isAdmin, async (req, res) => {
   const { question_text, option_a, option_b, option_c, option_d, correct_option, category } = req.body;
   
   if (!question_text || !option_a || !option_b || !option_c || !option_d || !correct_option || !category) {
@@ -421,7 +368,7 @@ app.post('/admin/add-question', isAdmin, async (req, res) => {
 });
 
 // Admin: View Questions by Category
-app.get('/admin/view-questions', isAdmin, async (req, res) => {
+app.get('/admin/view-questions', authenticateToken, isAdmin, async (req, res) => {
   const { category } = req.query;
 
   try {
@@ -445,7 +392,7 @@ app.get('/admin/view-questions', isAdmin, async (req, res) => {
 });
 
 // Admin: Delete a Question
-app.delete('/admin/delete-question/:id', isAdmin, async (req, res) => {
+app.delete('/admin/delete-question/:id', authenticateToken, isAdmin, async (req, res) => {
   const questionId = req.params.id;
 
   try {
@@ -463,10 +410,7 @@ app.delete('/admin/delete-question/:id', isAdmin, async (req, res) => {
 });
 
 // Load Quiz
-app.get('/questions', refreshSession, async (req, res) => {
-  if (!req.session.user) {
-    return res.status(401).json({ error: "User not logged in" });
-  }
+app.get('/questions', authenticateToken, async (req, res) => {
   let { category } = req.query;
 
   if (!category) {
@@ -484,15 +428,10 @@ app.get('/questions', refreshSession, async (req, res) => {
 });
 
 // Submit Quiz
-app.post('/submit-quiz', refreshSession, async (req, res) => {
-  console.log('Submit quiz - Session ID:', req.session.id);
-  console.log('Submit quiz - User data:', req.session.user);
+app.post('/submit-quiz', authenticateToken, async (req, res) => {
+  console.log('Submit quiz - User ID:', req.user.user_id);
   
-  if (!req.session.user) {
-    return res.status(401).json({ error: "User not logged in" });
-  }
-  
-  const { user_id } = req.session.user;
+  const { user_id } = req.user;
   const { quiz_id, category, answers } = req.body;
 
   if (!quiz_id || !category) {
@@ -559,11 +498,8 @@ app.post('/submit-quiz', refreshSession, async (req, res) => {
 });
 
 // Fetch Quiz Results
-app.get('/quiz-results/:quiz_id', refreshSession, async (req, res) => {
-  if (!req.session.user) {
-    return res.status(401).json({ error: "User not logged in" });
-  }
-  const { user_id } = req.session.user;
+app.get('/quiz-results/:quiz_id', authenticateToken, async (req, res) => {
+  const { user_id } = req.user;
   const { quiz_id } = req.params;
 
   try {
@@ -583,12 +519,8 @@ app.get('/quiz-results/:quiz_id', refreshSession, async (req, res) => {
 });
 
 // Get User Quiz Statistics
-app.get('/quiz-stats', refreshSession, async (req, res) => {
-  if (!req.session.user) {
-    return res.status(401).json({ error: "Not logged in" });
-  }
-
-  const userId = req.session.user.user_id;
+app.get('/quiz-stats', authenticateToken, async (req, res) => {
+  const userId = req.user.user_id;
   
   try {
     const query = `
@@ -625,24 +557,20 @@ app.get('/health', (req, res) => {
   res.status(200).json({ status: 'OK', timestamp: new Date().toISOString() });
 });
 
-app.get('/api/debug-session', (req, res) => {
+// Token debugging endpoint
+app.get('/api/debug-token', authenticateToken, (req, res) => {
   res.json({
-    sessionExists: !!req.session,
-    sessionID: req.session?.id || 'none',
-    hasUser: !!req.session?.user,
-    cookieSettings: {
-      maxAge: req.session?.cookie?.maxAge,
-      httpOnly: req.session?.cookie?.httpOnly,
-      secure: req.session?.cookie?.secure,
-      sameSite: req.session?.cookie?.sameSite
-    },
+    tokenExists: true,
+    decodedToken: req.user,
     headers: {
       'user-agent': req.headers['user-agent'],
       'origin': req.headers.origin,
-      'host': req.headers.host
+      'host': req.headers.host,
+      'authorization': req.headers['authorization'] ? '(present)' : '(not present)'
     }
   });
 });
+
 // Error Handling Middleware
 app.use((err, req, res, next) => {
   console.error('Unexpected error:', err.stack);

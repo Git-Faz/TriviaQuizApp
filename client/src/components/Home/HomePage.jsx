@@ -1,13 +1,14 @@
-import  { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import CategorySelection from './CategorySelection';
 import Navbar from '../Layout/Navbar';
 import neonBlue from '../../assets/neonBlue.avif';
 import { API_URL } from '../../config';
+import { useAuthContext } from '../../Context/AuthContext';
 
 const HomePage = () => {
   const [selectedCategory, setSelectedCategory] = useState(null);
-  const [userData, setUserData] = useState(null);
+  const { user, isAuthenticated } = useAuthContext();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -19,23 +20,6 @@ const HomePage = () => {
       checkLoginAndStartQuiz(redirectCategory);
       window.history.replaceState({}, document.title, location.pathname);
     }
-
-    fetch(`${API_URL}/api/user`, {
-      method: 'GET',
-      credentials: 'include'
-    })
-      .then((response) => response.json())
-      .then((data) => {
-        if (data.error) {
-          setUserData(null);
-          return;
-        }
-        setUserData(data);
-      })
-      .catch((error) => {
-        console.error('Failed to fetch user data:', error);
-        setUserData(null);
-      });
   }, [location.search]);
 
   const handleCategorySelect = (category) => {
@@ -43,26 +27,11 @@ const HomePage = () => {
   };
 
   const checkLoginAndStartQuiz = (category) => {
-    fetch(`${API_URL}/api/user`, {
-      method: 'GET',
-      credentials: 'include'
-    })
-      .then((response) => {
-        if (!response.ok) throw new Error('Not logged in');
-        return response.json();
-      })
-      .then((data) => {
-        if (data.error || !data.user_id) {
-          navigate(`/account?category=${encodeURIComponent(category)}`);
-          return;
-        }
-        //const displayCategory = category === 'GK' ? 'General Knowledge' : category;
-        navigate(`/quiz/${encodeURIComponent(category)}`);
-      })
-      .catch((error) => {
-        navigate(`/account?category=${encodeURIComponent(category)}`);
-        console.error('Failed to fetch user data:', error);
-      });
+    if (isAuthenticated) {
+      navigate(`/quiz/${encodeURIComponent(category)}`);
+    } else {
+      navigate(`/account?category=${encodeURIComponent(category)}`);
+    }
   };
 
   return (
@@ -71,7 +40,7 @@ const HomePage = () => {
       style={{ backgroundImage: `url(${neonBlue})` }}
     >
       <div className="quiz-container my-auto p-4 sm:p-6 bg-gray-900 rounded-lg w-full max-w-full sm:max-w-[90%] md:max-w-[80%] lg:max-w-[75%] h-screen overflow-y-auto">
-        <Navbar userData={userData} showManageQuiz={userData?.role === 'admin'} />
+        <Navbar showManageQuiz={user?.role === 'admin'} />
         <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-[#3bc7ff] mb-2 sm:mb-4 text-center">Trivia Challenge</h1>
         <p className="text-white mb-3 sm:mb-6 text-center text-sm sm:text-base">
           Test your knowledge across various topics and have fun!
