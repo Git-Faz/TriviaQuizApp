@@ -17,6 +17,7 @@ const QuizPage = () => {
   const [quizResults, setQuizResults] = useState(null);
   const [timeLeft, setTimeLeft] = useState(5 * 60);
   const [isLoading, setIsLoading] = useState(true);
+  const [calculatingResults, setCalculatingResults] = useState(false);
   const [error, setError] = useState(null);
   const timerRef = useRef(null);
 
@@ -106,6 +107,10 @@ const QuizPage = () => {
       return;
     }
 
+    // Set calculating results to true before making the API call
+    setCalculatingResults(true);
+    setQuizSubmitted(true);
+
     const quiz_id = `quiz-${Date.now()}`;
     try {
       const quizData = {
@@ -119,14 +124,16 @@ const QuizPage = () => {
       
       const data = await quizService.submitQuiz(quizData);
       setQuizResults(data);
-      setQuizSubmitted(true);
-      fetchQuizResults(data.quiz_id);
+      await fetchQuizResults(data.quiz_id);
+      // Set calculating results to false after receiving the data
+      setCalculatingResults(false);
     } catch (err) {
       if (err.response && err.response.status === 401) {
         navigate(`/account?category=${encodeURIComponent(decodedCategory)}`);
         return;
       }
       setError(`Failed to submit quiz: ${err.message}`);
+      setCalculatingResults(false);
     }
   }, [decodedCategory, navigate, questions.length, userAnswers]);
 
@@ -251,7 +258,12 @@ const QuizPage = () => {
           </div>
         ) : (
           <div className="quiz-container bg-black text-white shadow-[0_0_10px_#3bc7ff] rounded-lg w-full h-fit p-[20px_30px] text-center">
-            <QuizResults quizResults={quizResults} userAnswers={userAnswers} questions={questions} />
+            <QuizResults 
+              quizResults={quizResults} 
+              userAnswers={userAnswers} 
+              questions={questions} 
+              isLoading={calculatingResults} 
+            />
           </div>
         )}
       </div>
