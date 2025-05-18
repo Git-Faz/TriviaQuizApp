@@ -4,7 +4,7 @@ import Question from './Question';
 import QuizResults from './QuizResults';
 import neonBlue from '../../assets/neonBlue.avif';
 import { useAuthContext } from '../../Context/AuthContext';
-import { quizService } from '../../services';
+import { quizService } from '../../Services/ApiService';
 
 const QuizPage = () => {
   const { category } = useParams();

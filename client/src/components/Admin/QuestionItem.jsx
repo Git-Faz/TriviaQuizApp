@@ -1,7 +1,6 @@
 const QuestionItem = ({ question, onDelete }) => {
     return (
       <div className="border border-gray-700 p-4 rounded">
-        {/* <p><strong>Category:</strong> {question.category}</p> */}
         <p><strong>Question:</strong> {question.question_text}</p>
         <p><strong>A:</strong> {question.a}</p>
         <p><strong>B:</strong> {question.b}</p>

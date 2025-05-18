@@ -5,7 +5,7 @@ import QuizStats from './QuizStats';
 import EditUser from './EditUser';
 import NavigationButtons from './NavigationButtons';
 import neonBlue from '../../assets/neonBlue.avif';
-import { authService, quizService } from '../../services';
+import { authService, quizService } from '../../Services/ApiService';
 import { useAuthContext } from '../../Context/AuthContext';
 
 const UserProfile = () => {

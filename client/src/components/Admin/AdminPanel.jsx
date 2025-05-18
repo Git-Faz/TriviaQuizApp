@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { HomeBtn } from '../common/Button';
 import AddQuestion from './AddQuestion';
 import ViewQuestions from './ViewQuestions';
-import { adminService } from '../../services';
+import { adminService } from '../../Services/ApiService';
 
 const AdminPanel = () => {
   const [questions, setQuestions] = useState([]);
