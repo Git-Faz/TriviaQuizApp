@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import UserInfo from './UserInfo';
 import QuizStats from './QuizStats';
 import EditUser from './EditUser';
-import NavigationButtons from './NavigationButtons';
+import Navbar from '../Layout/Navbar';
 import neonBlue from '../../assets/neonBlue.avif';
 import { authService, quizService } from '../../Services/ApiService';
 import { useAuthContext } from '../../Context/AuthContext';
@@ -137,10 +137,7 @@ const UserProfile = () => {
           />
         )}
 
-        <NavigationButtons 
-          onDashboardClick={() => navigate('/')}
-          onLogoutClick={handleLogout}
-        />
+        <Navbar/>
       </div>
     </div>
   );

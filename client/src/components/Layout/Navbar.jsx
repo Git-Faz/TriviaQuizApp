@@ -1,16 +1,23 @@
 import { useContext } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import AuthContext from '../../Context/AuthContext';
 
 const Navbar = ({ showManageQuiz = false }) => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { user, logout, isAuthenticated } = useContext(AuthContext);
 
+  const isHomePage = location.pathname === '/';
+
   const handleProfileClick = () => {
-    if (!isAuthenticated) {
-      navigate('/account');
+    if (isHomePage) {
+      if (!isAuthenticated) {
+        navigate('/account');
+      } else {
+        navigate('/userProfile');
+      }
     } else {
-      navigate('/userProfile');
+      navigate('/');
     }
   };
 
@@ -27,6 +34,12 @@ const Navbar = ({ showManageQuiz = false }) => {
     }
   };
 
+  const profileButtonText = isHomePage
+    ? user?.username
+      ? `Welcome, ${user.username}`
+      : 'My Profile'
+    : 'Home';
+
   return (
     <div className="flex justify-between items-center p-2.5 mb-8 w-full">
       <button
@@ -34,9 +47,9 @@ const Navbar = ({ showManageQuiz = false }) => {
         border-solid h-9 w-fit border-2 border-green-600 text-green-600 font-bold hover:bg-green-600 hover:text-white hover:font-bold cursor-pointer"
         onClick={handleProfileClick}
       >
-        {user?.username ? `Welcome, ${user.username}` : 'My Profile'}
+        {profileButtonText}
       </button>
-      
+
       {showManageQuiz && user?.role === 'admin' && (
         <button 
           className="btn py-2 px-3.5 justify-center items-center text-center box-border content-center rounded-md cursor-pointer
@@ -46,7 +59,7 @@ const Navbar = ({ showManageQuiz = false }) => {
           Manage Quiz
         </button>
       )}
-      
+
       {isAuthenticated && (
         <button
           className="flex py-2 px-3.5 justify-center items-center text-center box-border rounded-md

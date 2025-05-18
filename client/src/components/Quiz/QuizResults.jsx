@@ -1,4 +1,4 @@
-import { HomeBtn, LogoutBtn } from '../common/Button';
+import Navbar from "../Layout/Navbar";
 const QuizResults = ({ quizResults, userAnswers, questions }) => {
   if (!quizResults || !questions.length) {
     return (
@@ -15,14 +15,14 @@ const QuizResults = ({ quizResults, userAnswers, questions }) => {
   return (
     <div className="results-container">
       <div className='flex flex-row justify-between h-auto align-center items-center mb-4 mt-4 py-4'>
+        <Navbar/>
         <div className={`p-3 w-[100%] h-fit flex flex-row justify-between items-center rounded-lg text-center border-2 border-gray-700 ${bgColor} mb-auto`}>
           <h2 className="text-2xl font-bold text-white mb-2 ">Quiz Results</h2>
           <p className="text-xl text-white">
             Score: <span className="font-bold">{quizResults.score}/{quizResults.total}</span> ({scorePercentage}%)
           </p>
         </div>
-        <HomeBtn /> 
-        <LogoutBtn />
+        
       </div>
       {questions.map((question, index) => {
         const answer = userAnswers.find((a) => a.question_id === question.id);
