@@ -63,7 +63,7 @@ const Navbar = ({ showManageQuiz = false }) => {
       {isAuthenticated && (
         <button
           className="flex p-1.5 justify-center items-center text-center box-border rounded-md
-          border-solid border-2 border-red-700 h-fit w-fit hover:bg-red-700 text-red-700 font-bold hover:font-bold hover:text-white cursor-pointer"
+          border-solid border-2 border-red-700 h-fit w-fit sm:h-16 hover:bg-red-700 text-red-700 font-bold hover:font-bold hover:text-white cursor-pointer"
           onClick={handleLogoutClick}
         >
           Logout
