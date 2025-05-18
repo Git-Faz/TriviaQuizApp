@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { HomeBtn } from '../common/Button';
+import Navbar from '../Layout/Navbar';
 import AddQuestion from './AddQuestion';
 import ViewQuestions from './ViewQuestions';
 import { adminService } from '../../Services/ApiService';
@@ -35,7 +35,7 @@ const AdminPanel = () => {
 
   return (
     <div className="bg-black p-6">
-      <HomeBtn />
+      <Navbar />
       <div className="max-w-2xl mx-auto bg-[#202020] p-6 rounded-lg shadow-md">
         <h1 className="text-2xl font-bold mb-4 text-white">Admin Panel - Manage Questions</h1>
         
