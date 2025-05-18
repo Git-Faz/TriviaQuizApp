@@ -7,6 +7,7 @@ const Navbar = ({ showManageQuiz = false }) => {
   const location = useLocation();
   const { user, logout, isAuthenticated } = useContext(AuthContext);
 
+  const isHomePage = location.pathname === '/';
 
   const handleProfileClick = () => {
     if (isHomePage) {
