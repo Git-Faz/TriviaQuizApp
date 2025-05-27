@@ -1,6 +1,13 @@
 import { useContext } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import AuthContext from '../../Context/AuthContext';
+import logo from '../../assets/logocp.svg'; // Adjust the path as necessary
+
+const Logo = ({ image, size }) => {
+  return (
+    <img src={image} alt="Quizzone Logo" className={`w-${size} h-${size}`} />
+  );
+};
 
 const Navbar = ({ showManageQuiz = false }) => {
   const navigate = useNavigate();
@@ -41,7 +48,8 @@ const Navbar = ({ showManageQuiz = false }) => {
     : 'Home';
 
   return (
-    <div className="flex justify-between items-center p-2.5 mb-8 w-full">
+    <div className="flex justify-between items-center p-2.5 mb-6 w-full">
+      {isHomePage && <Logo image={logo} size={15} />}
       <button
         className="flex p-1.5 justify-center items-center text-center box-border rounded-md
         border-solid w-fit h-fit border-2 border-green-600 text-green-600 font-bold hover:bg-green-600 hover:text-white hover:font-bold cursor-pointer"
@@ -49,7 +57,7 @@ const Navbar = ({ showManageQuiz = false }) => {
       >
         {profileButtonText}
       </button>
-
+      
       {showManageQuiz && user?.role === 'admin' && (
         <button 
           className="btn p-1.5 justify-center items-center text-center box-border content-center rounded-md cursor-pointer

@@ -41,7 +41,12 @@ const HomePage = () => {
     >
       <div className="quiz-container my-auto p-4 sm:p-6 bg-gray-900 rounded-lg w-full max-w-full sm:max-w-[90%] md:max-w-[80%] lg:max-w-[75%] h-screen overflow-y-auto">
         <Navbar showManageQuiz={user?.role === 'admin'} />
-        <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-[#3bc7ff] mb-2 sm:mb-4 text-center">Trivia Challenge</h1>
+        <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-[#3bc7ff] mb-2 sm:mb-4 h-fit py-2 text-center">
+          Quizzone
+        </h1>
+        <h3 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl text-white mt-4 mb-2 py-1 sm:mb-4 text-center">
+          Trivia Challenge
+        </h3>
         <p className="text-white mb-3 sm:mb-6 text-center text-sm sm:text-base">
           Test your knowledge across various topics and have fun!
         </p>
