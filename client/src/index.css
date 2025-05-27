@@ -6,13 +6,16 @@
     }
 
     button{
-        @apply cursor-pointer
+        @apply cursor-pointer;
     }
 }
 
 @layer components {
     .category-btn {
-        @apply p-2.5 max-w-[75%] w-full flex justify-center items-center gap-0 border border-black rounded-md text-black font-bold bg-[#78CAD2] cursor-pointer transition-all duration-300 hover:bg-[#3bc7ff] hover:text-black hover:border-black active:bg-[#3bc7ff];
+        @apply p-2.5 max-w-[75%] w-full flex justify-center items-center gap-0;
+        @apply border border-black rounded-md text-black font-bold bg-[#78CAD2];
+        @apply cursor-pointer transition-all duration-300;
+        @apply hover:bg-[#3bc7ff] hover:text-black hover:border-black active:bg-[#3bc7ff];
     }
 
     .category-btn[aria-selected="true"] {
@@ -37,6 +40,7 @@
 
     .quiz-heading h2 {
         @apply mr-2 w-full text-black bg-[#3bc7ff] text-2xl;
+        @apply ml-2 text-green-500 bg-black border-2 border-green-500 hover:bg-green-500 hover:text-black active:bg-green-700 active:text-white text-lg;
     }
 
     .quiz-heading a {
@@ -49,6 +53,7 @@
 
     .delete-btn {
         @apply px-3 py-1.5 border-2 border-red-500 hover:bg-red-500;
+        @apply active:bg-red-700 active:text-white;
     }
 }
 

@@ -3,9 +3,13 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import AuthContext from '../../Context/AuthContext';
 import logo from '../../assets/logocp.svg'; // Adjust the path as necessary
 
-const Logo = ({ image, size }) => {
+const Logo = ({ image, size = 4 }) => {
   return (
-    <img src={image} alt="Quizzone Logo" className={`w-${size} h-${size}`} />
+    <img 
+      src={image} 
+      alt="Quizzone Logo" 
+      style={{ width: `${size}rem`, height: `${size}rem` }}
+    />
   );
 };
 
@@ -49,7 +53,7 @@ const Navbar = ({ showManageQuiz = false }) => {
 
   return (
     <div className="flex justify-between items-center p-2.5 mb-6 w-full">
-      {isHomePage && <Logo image={logo} size={15} />}
+      {isHomePage && <Logo image={logo} className="w-12" />}
       <button
         className="flex p-1.5 justify-center items-center text-center box-border rounded-md
         border-solid w-fit h-fit border-2 border-green-600 text-green-600 font-bold hover:bg-green-600 hover:text-white hover:font-bold cursor-pointer"
