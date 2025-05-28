@@ -56,7 +56,7 @@ const Navbar = ({ showManageQuiz = false }) => {
     : 'Home';
 
   return (
-    <nav className="shadow-md border-b-4 border-[#3bc7ff] sticky top-0 z-50 relative">
+    <nav className="shadow-md border-b-4 border-[#3bc7ff] sticky top-0 z-50">
       {/* Glowing line at bottom */}
       <div className="absolute bottom-0 left-0 right-0 h-0.5 pb-0 bg-[#3bc7ff] shadow-[0_0_10px_#3bc7ff]"></div>
       
