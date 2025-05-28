@@ -8,7 +8,11 @@ const Logo = ({ image, size = 4 }) => {
     <img 
       src={image} 
       alt="Quizzone Logo" 
-      className={`w-${size * 4} h-${size * 4} object-contain`}
+      style={{ 
+        width: `${size * 16}px`, 
+        height: `${size * 16}px` 
+      }}
+      className="object-contain"
     />
   );
 };
