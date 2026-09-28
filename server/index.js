@@ -19,38 +19,16 @@ app.use(compression()); // Compress responses
 
 // CORS Middleware
 app.use(cors({
-  origin: (origin, callback) => {
-    console.log('CORS Origin:', origin);
-    const allowedOrigins = [
-      process.env.CLIENT_URL, 
-      'http://localhost:5173', 
-      'http://localhost:4173'
-    ];
-
-    console.log('CLIENT_URL:', process.env.CLIENT_URL);
-
-    if (!origin || allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      console.log('Rejected Origin:', origin);
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
+  origin: 'https://trivia-quiz-app-mocha.vercel.app',
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 
-    'Authorization', 
-    'X-Requested-With', 
-    'Accept', 
-    'Origin', 
-    'Expires', 
-    'Cache-Control',
-    'Pragma', // Added for cache control
-    'Accept-Encoding', // Added for compression
-    'Content-Length', // For request body size
-    'If-None-Match', // For ETag-based caching
-    'User-Agent', // For client identification
-    ],
+  allowedHeaders: [
+    'Content-Type',
+    'Authorization',
+    'X-Requested-With',
+    'Accept',
+    'Origin'
+  ],
   exposedHeaders: ['Set-Cookie', 'Date', 'ETag']
 }));
 
